@@ -98,11 +98,15 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
     setIsConnected(false);
   }, [cleanup]);
 
-  const send = useCallback((data: Record<string, unknown>) => {
+  const send = useCallback((data: Record<string, unknown>, quiet = false) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(data));
+      return true;
     } else {
-      console.warn("WebSocket not connected, cannot send:", data);
+      if (!quiet) {
+        console.warn("WebSocket not connected, cannot send:", data);
+      }
+      return false;
     }
   }, []);
 

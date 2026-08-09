@@ -83,15 +83,16 @@ function App() {
 
       // Send join message once connected
       const interval = setInterval(() => {
-        if (useGameStore.getState().isConnected) {
-          const joinMsg: Record<string, unknown> = {
-            type: playerId ? "rejoin" : "join",
-            name,
-          };
-          if (playerId) {
-            joinMsg.player_id = playerId;
-          }
-          send(joinMsg);
+        const joinMsg: Record<string, unknown> = {
+          type: playerId ? "rejoin" : "join",
+          name,
+        };
+        if (playerId) {
+          joinMsg.player_id = playerId;
+        }
+        // Cast to any since the type signature in the store might not include the quiet flag or boolean return
+        const success = (send as any)(joinMsg, true);
+        if (success) {
           clearInterval(interval);
         }
       }, 100);
