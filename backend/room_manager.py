@@ -102,12 +102,24 @@ class RoomManager:
         return room_id, game
 
     def get_room(self, room_id: str) -> Optional[GameState]:
-        """Get a room's game state."""
-        return self._rooms.get(room_id)
+        """Get a room's game state, falling back to DB if not in memory."""
+        game = self._rooms.get(room_id)
+        if not game and supabase:
+            try:
+                res = supabase.table("rooms").select("*").eq("room_code", room_id).execute()
+                if res.data:
+                    game = GameState.model_validate(res.data[0]["game_state"])
+                    self._rooms[room_id] = game
+                    for p in game.players:
+                        self._player_rooms[p.id] = room_id
+                    logger.info(f"Room {room_id} loaded from DB fallback.")
+            except Exception as e:
+                logger.error(f"Fallback DB load failed for room {room_id}: {e}")
+        return game
 
     def room_exists(self, room_id: str) -> bool:
         """Check if a room exists."""
-        return room_id in self._rooms
+        return self.get_room(room_id) is not None
 
     def get_player_room(self, player_id: str) -> Optional[str]:
         """Get the room ID a player is in."""
@@ -120,7 +132,7 @@ class RoomManager:
         Join a room. Returns (error_message, game_state).
         error_message is None on success.
         """
-        game = self._rooms.get(room_id)
+        game = self.get_room(room_id)
         if not game:
             return "Room not found.", None
 
@@ -161,7 +173,7 @@ class RoomManager:
         if not room_id:
             return None, None, False
 
-        game = self._rooms.get(room_id)
+        game = self.get_room(room_id)
         if not game:
             return room_id, None, True
 
@@ -208,7 +220,7 @@ class RoomManager:
         if not room_id:
             return None, None, False
 
-        game = self._rooms.get(room_id)
+        game = self.get_room(room_id)
         if not game:
             self._player_rooms.pop(player_id, None)
             return room_id, None, True
@@ -246,7 +258,7 @@ class RoomManager:
         Update room configuration. Host only, lobby only.
         Returns error message or None.
         """
-        game = self._rooms.get(room_id)
+        game = self.get_room(room_id)
         if not game:
             return "Room not found."
         if game.status != GameStatus.LOBBY:
@@ -278,7 +290,7 @@ class RoomManager:
         Start the game. Host only.
         Returns error message or None.
         """
-        game = self._rooms.get(room_id)
+        game = self.get_room(room_id)
         if not game:
             return "Room not found."
         if game.status != GameStatus.LOBBY:
@@ -303,7 +315,7 @@ class RoomManager:
         Start a new round after the previous one ended.
         Returns error message or None.
         """
-        game = self._rooms.get(room_id)
+        game = self.get_room(room_id)
         if not game:
             return "Room not found."
         if game.status != GameStatus.ROUND_END:
@@ -317,7 +329,7 @@ class RoomManager:
 
     def remove_player(self, room_id: str, host_id: str, target_player_id: str) -> Optional[str]:
         """Host removes a disconnected player."""
-        game = self._rooms.get(room_id)
+        game = self.get_room(room_id)
         if not game:
             return "Room not found."
 
