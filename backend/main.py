@@ -277,6 +277,7 @@ async def handle_message(
             await ws.send_json({"type": "error", "error": error})
             return
         place_bid(game, seat, msg.amount)
+        room_manager.save_room(room_id)
         await _broadcast_full_state(room_id, game)
 
     elif msg.type == "pass":
@@ -284,6 +285,7 @@ async def handle_message(
             await ws.send_json({"type": "error", "error": "Cannot pass right now."})
             return
         pass_bid(game, seat)
+        room_manager.save_room(room_id)
         await _broadcast_full_state(room_id, game)
 
     elif msg.type == "select_trump":
@@ -295,6 +297,7 @@ async def handle_message(
             await ws.send_json({"type": "error", "error": error})
             return
         select_trump(game, seat, msg.suit)
+        room_manager.save_room(room_id)
         await _broadcast_full_state(room_id, game)
 
     elif msg.type == "select_bherus":
@@ -304,6 +307,7 @@ async def handle_message(
             await ws.send_json({"type": "error", "error": error})
             return
         assign_bherus(game, seat, calls)
+        room_manager.save_room(room_id)
         await _broadcast_full_state(room_id, game)
 
     elif msg.type == "play_card":
@@ -320,6 +324,7 @@ async def handle_message(
             await ws.send_json({"type": "error", "error": error})
             return
         play_card(game, seat, card)
+        room_manager.save_room(room_id)
         await _broadcast_full_state(room_id, game)
 
     elif msg.type == "restart":

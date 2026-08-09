@@ -12,6 +12,7 @@ import string
 import logging
 from typing import Optional
 
+from db import supabase
 from models import (
     Player, GameState, GameStatus, RoomConfig,
 )
@@ -21,13 +22,54 @@ logger = logging.getLogger("kadi_teeri.room")
 
 
 class RoomManager:
-    """In-memory room management (can be swapped for Supabase later)."""
+    """Room management backed by Supabase with in-memory caching."""
 
     def __init__(self):
         # room_id -> GameState
         self._rooms: dict[str, GameState] = {}
         # player_id -> room_id (reverse lookup)
         self._player_rooms: dict[str, str] = {}
+        self._load_from_db()
+
+    def _load_from_db(self):
+        if not supabase:
+            logger.warning("Supabase client not available. Running purely in-memory.")
+            return
+        try:
+            res = supabase.table("rooms").select("*").execute()
+            for row in res.data:
+                room_code = row["room_code"]
+                try:
+                    game = GameState.model_validate(row["game_state"])
+                    self._rooms[room_code] = game
+                    for p in game.players:
+                        self._player_rooms[p.id] = room_code
+                except Exception as e:
+                    logger.error(f"Failed to load room {room_code}: {e}")
+            logger.info(f"Loaded {len(self._rooms)} rooms from Supabase.")
+        except Exception as e:
+            logger.error(f"Supabase load error: {e}")
+
+    def save_room(self, room_id: str):
+        if not supabase:
+            return
+        game = self._rooms.get(room_id)
+        if game:
+            try:
+                supabase.table("rooms").upsert({
+                    "room_code": room_id,
+                    "game_state": game.model_dump(mode="json")
+                }).execute()
+            except Exception as e:
+                logger.error(f"Supabase save error for room {room_id}: {e}")
+
+    def delete_room(self, room_id: str):
+        if not supabase:
+            return
+        try:
+            supabase.table("rooms").delete().eq("room_code", room_id).execute()
+        except Exception as e:
+            logger.error(f"Supabase delete error for room {room_id}: {e}")
 
     def _generate_room_id(self) -> str:
         """Generate a unique 6-character room code."""
@@ -53,6 +95,8 @@ class RoomManager:
 
         self._rooms[room_id] = game
         self._player_rooms[player_id] = room_id
+        
+        self.save_room(room_id)
 
         logger.info(f"Room {room_id} created by {player_name}")
         return room_id, game
@@ -103,6 +147,8 @@ class RoomManager:
 
         game.log.append(f"{player_name} joined the room.")
         logger.info(f"Player {player_name} joined room {room_id} at seat {seat}")
+        
+        self.save_room(room_id)
 
         return None, game
 
@@ -150,6 +196,7 @@ class RoomManager:
             if player.is_host:
                 self._transfer_host(game)
 
+        self.save_room(room_id)
         return room_id, game, False
 
     def disconnect_player(self, player_id: str) -> tuple[Optional[str], Optional[GameState], bool]:
@@ -223,6 +270,7 @@ class RoomManager:
             game.config.deck_count = deck_count
             game.log.append(f"Deck count set to {deck_count}.")
 
+        self.save_room(room_id)
         return None
 
     def start_game(self, room_id: str, player_id: str) -> Optional[str]:
@@ -247,6 +295,7 @@ class RoomManager:
         deal_new_round(game, is_first=True)
         logger.info(f"Game started in room {room_id}")
 
+        self.save_room(room_id)
         return None
 
     def restart_game(self, room_id: str, player_id: str) -> Optional[str]:
@@ -263,6 +312,7 @@ class RoomManager:
         deal_new_round(game, is_first=False)
         logger.info(f"New round started in room {room_id}")
 
+        self.save_room(room_id)
         return None
 
     def remove_player(self, room_id: str, host_id: str, target_player_id: str) -> Optional[str]:
@@ -298,6 +348,7 @@ class RoomManager:
             game.bherus = []
             game.log.append("Game aborted because a player was removed.")
 
+        self.save_room(room_id)
         return None
 
 

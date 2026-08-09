@@ -83,8 +83,7 @@ function App() {
 
       // Send join message once connected
       const interval = setInterval(() => {
-        // Check if the WebSocket is connected by checking if send works
-        try {
+        if (useGameStore.getState().isConnected) {
           const joinMsg: Record<string, unknown> = {
             type: playerId ? "rejoin" : "join",
             name,
@@ -94,8 +93,6 @@ function App() {
           }
           send(joinMsg);
           clearInterval(interval);
-        } catch {
-          // Not connected yet, retry
         }
       }, 100);
 
