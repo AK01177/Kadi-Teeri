@@ -698,7 +698,11 @@ def sanitize_game_state(game: GameState) -> dict:
     # Card counts per player (so UI can show how many cards each player has)
     state["hand_sizes"] = {s: len(game.hands.get(s, [])) for s in range(len(game.players))}
 
-    # Captured card counts
+    # Captured card counts and points
     state["captured_counts"] = {s: len(game.captured.get(s, [])) for s in range(len(game.players))}
+    state["captured_points"] = {
+        s: sum(c.points() for c in game.captured.get(s, []))
+        for s in range(len(game.players))
+    }
 
     return state

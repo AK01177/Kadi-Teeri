@@ -91,6 +91,7 @@ export interface GameState {
   trick_number: number;
   hand_sizes: Record<number, number>;
   captured_counts: Record<number, number>;
+  captured_points: Record<number, number>;
   round_result?: RoundResult;
   rounds_played: number;
   wins: Record<string, number>;

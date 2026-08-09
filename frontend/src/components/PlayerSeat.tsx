@@ -31,9 +31,10 @@ export function PlayerSeat({ player, game, isActive, position }: PlayerSeatProps
           </span>
         )}
       </div>
-      {game.hand_sizes && game.status === "playing" && (
-        <div style={{ fontSize: "10px", color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
-          {game.hand_sizes[player.seat] ?? 0} cards
+      {game.status === "playing" && (
+        <div style={{ fontSize: "10px", color: "var(--muted)", fontFamily: "var(--font-mono)", display: "flex", gap: "8px", justifyContent: "center" }}>
+          <span>{game.hand_sizes?.[player.seat] ?? 0} cards</span>
+          <span>{game.captured_points?.[player.seat] ?? 0} pts</span>
         </div>
       )}
     </div>
