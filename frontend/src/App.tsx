@@ -1,0 +1,238 @@
+import { useEffect, useCallback } from "react";
+import { useGameStore } from "./store/gameStore";
+import { useWebSocket } from "./hooks/useWebSocket";
+import type { ServerMessage } from "./types/game";
+
+import { HomePage } from "./pages/HomePage";
+import { LobbyPage } from "./pages/LobbyPage";
+import { BiddingPage } from "./pages/BiddingPage";
+import { TrumpSelectPage } from "./pages/TrumpSelectPage";
+import { BheruSelectPage } from "./pages/BheruSelectPage";
+import { PlayingPage } from "./pages/PlayingPage";
+import { RoundEndPage } from "./pages/RoundEndPage";
+
+const WS_BASE =
+  import.meta.env.VITE_WS_URL ||
+  `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`;
+
+function App() {
+  const {
+    roomId,
+    gameState,
+    toast,
+    clearToast,
+    setIdentity,
+    setGameState,
+    setConnected,
+    setSendFn,
+    showToast,
+    leaveRoom,
+  } = useGameStore();
+
+  const onMessage = useCallback(
+    (msg: ServerMessage) => {
+      switch (msg.type) {
+        case "welcome":
+          setIdentity({
+            playerId: msg.player_id,
+            roomId: msg.room_id,
+            seat: msg.seat,
+            isHost: msg.is_host,
+          });
+          // Save session for reconnect
+          localStorage.setItem(
+            "kadi_session",
+            JSON.stringify({
+              roomId: msg.room_id,
+              playerId: msg.player_id,
+              playerName: useGameStore.getState().playerName,
+            })
+          );
+          break;
+        case "game_state":
+          setGameState(msg.game, msg.hand);
+          break;
+        case "error":
+          showToast(msg.error);
+          break;
+      }
+    },
+    [setIdentity, setGameState, showToast]
+  );
+
+  const { send, isConnected, connect, disconnect } = useWebSocket({
+    onMessage,
+    onConnect: () => setConnected(true),
+    onDisconnect: () => setConnected(false),
+  });
+
+  // Store the send function in zustand so pages can use it
+  useEffect(() => {
+    setSendFn(send);
+  }, [send, setSendFn]);
+
+  // Expose connect function for HomePage
+  useEffect(() => {
+    (window as any).__kadiConnect = (
+      roomIdToJoin: string,
+      playerId: string | null,
+      name: string
+    ) => {
+      const wsUrl = `${WS_BASE}/ws/${roomIdToJoin}`;
+      connect(wsUrl);
+
+      // Send join message once connected
+      const interval = setInterval(() => {
+        // Check if the WebSocket is connected by checking if send works
+        try {
+          const joinMsg: Record<string, unknown> = {
+            type: playerId ? "rejoin" : "join",
+            name,
+          };
+          if (playerId) {
+            joinMsg.player_id = playerId;
+          }
+          send(joinMsg);
+          clearInterval(interval);
+        } catch {
+          // Not connected yet, retry
+        }
+      }, 100);
+
+      // Timeout after 5 seconds
+      setTimeout(() => clearInterval(interval), 5000);
+    };
+
+    return () => {
+      delete (window as any).__kadiConnect;
+    };
+  }, [connect, send]);
+
+  // Try to reconnect from saved session on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("kadi_session");
+      if (saved && !roomId) {
+        const session = JSON.parse(saved);
+        if (session.roomId && session.playerId && session.playerName) {
+          const wsUrl = `${WS_BASE}/ws/${session.roomId}`;
+          connect(wsUrl);
+
+          // Send rejoin once connected
+          setTimeout(() => {
+            send({
+              type: "rejoin",
+              name: session.playerName,
+              player_id: session.playerId,
+            });
+          }, 500);
+        }
+      }
+    } catch {
+      // No saved session
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleLeave = () => {
+    disconnect();
+    leaveRoom();
+    localStorage.removeItem("kadi_session");
+  };
+
+  // Copy room code
+  const copyCode = () => {
+    if (navigator.clipboard && roomId) {
+      navigator.clipboard
+        .writeText(roomId)
+        .then(() => showToast("Code copied!"))
+        .catch(() => showToast(roomId));
+    } else {
+      showToast(roomId || "");
+    }
+  };
+
+  // Render the appropriate page based on game status
+  const renderPage = () => {
+    if (!roomId || !gameState) {
+      return <HomePage />;
+    }
+
+    switch (gameState.status) {
+      case "lobby":
+        return <LobbyPage />;
+      case "bidding":
+        return <BiddingPage />;
+      case "trump":
+        return <TrumpSelectPage />;
+      case "bheru":
+        return <BheruSelectPage />;
+      case "playing":
+        return <PlayingPage />;
+      case "round_end":
+        return <RoundEndPage />;
+      default:
+        return <div className="panel">Loading…</div>;
+    }
+  };
+
+  const wins = gameState?.wins || {};
+
+  return (
+    <div id="app">
+      {/* Top bar (shown when in a room) */}
+      {roomId && gameState && (
+        <div className="topbar">
+          <span
+            className="code-chip"
+            role="button"
+            onClick={copyCode}
+            style={{ cursor: "pointer" }}
+          >
+            {roomId}
+          </span>
+          <div className="leaderboard">
+            {gameState.players.map((p) => {
+              const w = wins[p.id] || 0;
+              const isMe =
+                p.id === useGameStore.getState().playerId;
+              return (
+                <span
+                  key={p.id}
+                  className={`lb-pill${isMe ? " me" : ""}`}
+                >
+                  {p.name} · {w}
+                </span>
+              );
+            })}
+          </div>
+          <span className="spacer" />
+          {!isConnected && (
+            <span
+              style={{
+                color: "var(--danger)",
+                fontSize: "11px",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              Reconnecting…
+            </span>
+          )}
+          <button className="btn btn-ghost btn-sm" onClick={handleLeave}>
+            Leave
+          </button>
+        </div>
+      )}
+
+      {renderPage()}
+
+      {/* Toast */}
+      {toast && (
+        <div className="toast" onClick={clearToast}>
+          {toast}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default App;
