@@ -7,8 +7,16 @@ logger = logging.getLogger("kadi_teeri.db")
 
 load_dotenv()
 
-url: str = os.environ.get("SUPABASE_URL", "")
-key: str = os.environ.get("SUPABASE_KEY", "")
+url: str = os.environ.get("SUPABASE_URL", "").strip()
+key: str = os.environ.get("SUPABASE_KEY", "").strip()
+
+# Automatically fix PGRST125 errors if the user pasted the /rest/v1/ suffix
+if url.endswith("/rest/v1/"):
+    url = url[:-9]
+elif url.endswith("/rest/v1"):
+    url = url[:-8]
+elif url.endswith("/"):
+    url = url[:-1]
 
 supabase: Client | None = None
 
