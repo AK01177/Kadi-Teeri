@@ -7,6 +7,10 @@ CREATE TABLE rooms (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW())
 );
 
--- Optional: Enable Row Level Security (RLS) but allow the backend service key to bypass it
-ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Enable all for service role" ON rooms FOR ALL USING (true);
+-- Ensure the API roles have permission to access the table
+GRANT ALL ON public.rooms TO anon;
+GRANT ALL ON public.rooms TO authenticated;
+GRANT ALL ON public.rooms TO service_role;
+
+-- Disable Row Level Security since our backend acts as the sole secure client
+ALTER TABLE rooms DISABLE ROW LEVEL SECURITY;
