@@ -6,7 +6,7 @@ import { Hand } from "../components/Hand";
 import { ActivityLog } from "../components/ActivityLog";
 
 export function PlayingPage() {
-  const { gameState, hand, seat, sendFn } = useGameStore();
+  const { gameState, hand, seat, sendFn, trickWinner } = useGameStore();
 
   if (!gameState || seat === null) return null;
 
@@ -47,6 +47,15 @@ export function PlayingPage() {
 
   return (
     <>
+      {trickWinner && (
+        <div className="trick-winner-overlay">
+          <div className="winner-content">
+            <h2>{trickWinner.name} gets the trick!</h2>
+            <p>+{trickWinner.points} points</p>
+          </div>
+        </div>
+      )}
+
       <div className="status-bar" style={{ flexWrap: "wrap" }}>
         <span className="badge trump">
           Trump {SUIT_SYMBOLS[game.trump_suit!]}

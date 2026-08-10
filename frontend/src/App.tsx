@@ -52,6 +52,12 @@ function App() {
         case "game_state":
           setGameState(msg.game, msg.hand);
           break;
+        case "trick_winner":
+          useGameStore.getState().setTrickWinner({
+            name: msg.name as string,
+            points: msg.points as number,
+          });
+          break;
         case "error":
           showToast(msg.error);
           break;

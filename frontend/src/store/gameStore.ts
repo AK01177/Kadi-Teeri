@@ -30,6 +30,9 @@ interface GameStore {
   hand: Card[];
   setGameState: (game: GameState, hand?: Card[]) => void;
 
+  trickWinner: { name: string; points: number } | null;
+  setTrickWinner: (v: { name: string; points: number } | null) => void;
+
   // Local UI state
   pendingBid: number | null;
   setPendingBid: (v: number | null) => void;
@@ -94,8 +97,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
       hand: hand || state.hand,
       seat: me?.seat ?? state.seat,
       isHost: me?.is_host ?? state.isHost,
+      trickWinner: null,
     });
   },
+
+  trickWinner: null,
+  setTrickWinner: (v) => set({ trickWinner: v }),
 
   // Local UI state
   pendingBid: null,

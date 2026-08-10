@@ -165,4 +165,10 @@ export interface ErrorMessage {
   error: string;
 }
 
-export type ServerMessage = WelcomeMessage | GameStateMessage | ErrorMessage;
+export interface TrickWinnerMessage {
+  type: "trick_winner";
+  name: string;
+  points: number;
+}
+
+export type ServerMessage = WelcomeMessage | GameStateMessage | ErrorMessage | TrickWinnerMessage;
