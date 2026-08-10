@@ -61,15 +61,23 @@ interface GameStore {
   setSendFn: (fn: (data: Record<string, unknown>) => void) => void;
 }
 
+const sessionStr = localStorage.getItem("kadi_session");
+let session = null;
+try {
+  if (sessionStr) session = JSON.parse(sessionStr);
+} catch (e) {
+  // ignore
+}
+
 export const useGameStore = create<GameStore>((set, get) => ({
   // Connection
   isConnected: false,
   setConnected: (v) => set({ isConnected: v }),
 
   // Identity
-  playerId: null,
-  playerName: localStorage.getItem("kadi_player_name"),
-  roomId: null,
+  playerId: session?.playerId || null,
+  playerName: session?.playerName || localStorage.getItem("kadi_player_name"),
+  roomId: session?.roomId || null,
   seat: null,
   isHost: false,
 
@@ -142,7 +150,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   clearToast: () => set({ toast: null }),
 
   // Actions
-  reset: () =>
+  reset: () => {
+    localStorage.removeItem("kadi_session");
     set({
       playerId: null,
       roomId: null,
@@ -155,9 +164,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       bheruTabSuit: "S",
       selectedBheruCalls: [],
       isConnected: false,
-    }),
+    });
+  },
 
   leaveRoom: () => {
+    localStorage.removeItem("kadi_session");
     set({
       roomId: null,
       seat: null,

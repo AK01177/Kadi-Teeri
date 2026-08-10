@@ -151,6 +151,15 @@ export function LobbyPage() {
                     : ""}
                 </span>
                 {p.is_host && <span className="host-tag">HOST</span>}
+                {isHost && p.id !== useGameStore.getState().playerId && (
+                  <button
+                    className="btn btn-sm btn-ghost"
+                    onClick={() => sendFn?.({ type: "remove_player", target_player_id: p.id })}
+                    style={{ marginLeft: "auto", color: "var(--red)", fontSize: "11px", padding: "4px 8px" }}
+                  >
+                    Kick
+                  </button>
+                )}
               </div>
             );
           }
