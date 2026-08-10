@@ -1,7 +1,8 @@
 import { useTexture } from "@react-three/drei";
 import { useSpring, a } from "@react-spring/three";
+import { useThree } from "@react-three/fiber";
 import type { Card as CardType } from "../types/game";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import * as THREE from "three";
 
 interface Card3DProps {
@@ -9,106 +10,62 @@ interface Card3DProps {
   position: [number, number, number];
   rotation: [number, number, number];
   index: number;
-  isLegal?: boolean;
-  isMyTurn?: boolean;
-  inHand?: boolean;
-  onClick?: () => void;
+  /** If true, show the card back instead of the face */
+  faceDown?: boolean;
 }
 
-export function Card3D({ card, position, rotation, index, isLegal = true, isMyTurn = false, inHand = false, onClick }: Card3DProps) {
-  const suitNameMap: Record<string, string> = {
-    C: "clubs",
-    D: "diamonds",
-    H: "hearts",
-    S: "spades",
-  };
-  const suitName = suitNameMap[card.suit];
-  const imgSrc = `/CardsPNG/${suitName}_${card.rank}.png`;
+const SUIT_MAP: Record<string, string> = {
+  C: "clubs",
+  D: "diamonds",
+  H: "hearts",
+  S: "spades",
+};
+
+// Shared geometry — all cards reuse the exact same PlaneGeometry instance
+const CARD_GEO = new THREE.PlaneGeometry(1, 1.4);
+
+export function Card3D({ card, position, rotation, index, faceDown = false }: Card3DProps) {
+  const suitName = SUIT_MAP[card.suit];
+  const faceSrc = `/CardsPNG/${suitName}_${card.rank}.png`;
   const backSrc = `/CardsPNG/back_light.png`;
 
-  const [frontTex, backTex] = useTexture([imgSrc, backSrc]);
-  
-  const [hovered, setHovered] = useState(false);
-  const [played, setPlayed] = useState(false);
+  const [faceTex, backTex] = useTexture([faceSrc, backSrc]);
+  const invalidate = useThree((s) => s.invalidate);
+
+  const [dealt, setDealt] = useState(false);
 
   useEffect(() => {
-    // Staggered entry animation
-    const t = setTimeout(() => setPlayed(true), 50 + index * 50);
+    const t = setTimeout(() => {
+      setDealt(true);
+      invalidate(); // trigger a re-render in demand mode
+    }, 80 + index * 60);
     return () => clearTimeout(t);
-  }, [index]);
+  }, [index, invalidate]);
 
-  // Adjust position and rotation on hover for hand cards
-  const targetPosition = [...position];
-  const targetRotation = [...rotation];
-  let targetScale = 1;
-
-  if (inHand && hovered && isLegal) {
-    // Lift the card up and forward towards the camera
-    targetPosition[1] += 0.5; // Y up
-    targetPosition[2] += 0.2; // Z forward
-    targetRotation[0] = 0; // Stand it up slightly more
-    targetScale = 1.1;
-  }
-  
-  if (!isLegal) {
-    targetPosition[1] -= 0.2; // Dim/lower illegal cards
-  }
+  // MeshBasicMaterial: no lighting calculations, 3x faster on mobile
+  const material = useMemo(() => {
+    const tex = faceDown ? backTex : faceTex;
+    return new THREE.MeshBasicMaterial({
+      map: tex,
+      side: THREE.FrontSide,
+    });
+  }, [faceTex, backTex, faceDown]);
 
   const spring = useSpring({
-    position: played ? targetPosition : [0, -4, 4], // Fly from bottom
-    rotation: played ? targetRotation : [-Math.PI / 4, 0, 0],
-    scale: played ? targetScale : 1.5,
-    config: { mass: 1, tension: 200, friction: 20 },
+    position: dealt ? position : [0, -3, position[2]],
+    rotation: dealt ? rotation : [-Math.PI / 6, 0, 0],
+    scale: dealt ? 1 : 0.3,
+    config: { mass: 0.8, tension: 180, friction: 22 },
+    onChange: () => invalidate(), // re-render on each animation frame
   });
-
-  const edgeMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
-  const frontMaterial = new THREE.MeshStandardMaterial({ map: frontTex, transparent: true, alphaTest: 0.5, roughness: 0.4 });
-  const backMaterial = new THREE.MeshStandardMaterial({ map: backTex, transparent: true, alphaTest: 0.5, roughness: 0.4 });
-
-  // In Three.js, BoxGeometry faces are:
-  // 0: right, 1: left, 2: top, 3: bottom, 4: front(+z), 5: back(-z)
-  const materials = [
-    edgeMaterial, // right
-    edgeMaterial, // left
-    edgeMaterial, // top
-    edgeMaterial, // bottom
-    frontMaterial, // front
-    backMaterial, // back
-  ];
 
   return (
     <a.mesh
+      geometry={CARD_GEO}
+      material={material}
       position={spring.position as any}
       rotation={spring.rotation as any}
       scale={spring.scale as any}
-      castShadow
-      receiveShadow
-      onPointerOver={(e) => {
-        if (inHand && isLegal && isMyTurn) {
-          e.stopPropagation();
-          document.body.style.cursor = 'pointer';
-          setHovered(true);
-        }
-      }}
-      onPointerOut={() => {
-        if (inHand) {
-          document.body.style.cursor = 'auto';
-          setHovered(false);
-        }
-      }}
-      onClick={(e) => {
-        if (inHand && isLegal && isMyTurn && onClick) {
-          e.stopPropagation();
-          document.body.style.cursor = 'auto';
-          setHovered(false);
-          onClick();
-        }
-      }}
-    >
-      <boxGeometry args={[1, 1.42, 0.01]} />
-      {materials.map((mat, i) => (
-        <primitive key={i} object={mat} attach={`material-${i}`} />
-      ))}
-    </a.mesh>
+    />
   );
 }

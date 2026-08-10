@@ -18,7 +18,7 @@ export function GameTable({ game, mySeat, showTrick, hand, legalCards, isMyTurn,
   const is3DView = useGameStore((s) => s.is3DView);
 
   if (is3DView) {
-    return <GameTable3D game={game} mySeat={mySeat} showTrick={showTrick} hand={hand} legalCards={legalCards} isMyTurn={isMyTurn} onPlayCard={onPlayCard} />;
+    return <GameTable3D game={game} mySeat={mySeat} showTrick={showTrick} />;
   }
 
   const n = game.players.length;
