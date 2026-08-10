@@ -1,14 +1,17 @@
 import { PlayerSeat } from "./PlayerSeat";
 import { TrickArea } from "./TrickArea";
+import { DealingAnimation } from "./DealingAnimation";
 import type { GameState } from "../types/game";
 
 interface GameTableProps {
   game: GameState;
   mySeat: number;
   showTrick?: boolean;
+  isDealing?: boolean;
+  onDealComplete?: () => void;
 }
 
-export function GameTable({ game, mySeat, showTrick }: GameTableProps) {
+export function GameTable({ game, mySeat, showTrick, isDealing, onDealComplete }: GameTableProps) {
   const n = game.players.length;
 
   // Arrange seats around the table relative to the current player
@@ -20,19 +23,12 @@ export function GameTable({ game, mySeat, showTrick }: GameTableProps) {
 
   // Position assignments based on player count
   const getPositions = (): { seat: number; pos: string }[] => {
-    if (n <= 4) {
-      // 4 players: top, left, right
-      const positions = ["seat-top", "seat-left", "seat-right"];
-      return otherSeats.map((s, i) => ({
-        seat: s,
-        pos: positions[i] || "seat-top",
-      }));
-    }
-    // 5-8 players: distribute around
     return otherSeats.map((s, i) => {
-      const angle = i / (n - 1);
-      if (angle < 0.25) return { seat: s, pos: "seat-left" };
-      if (angle < 0.75) return { seat: s, pos: "seat-top" };
+      // Distribute seats: first ~1/3 on left, middle ~1/3 on top, last ~1/3 on right
+      // This visually creates a clockwise flow: Bottom -> Left -> Top -> Right -> Bottom
+      const groupSize = (n - 1) / 3;
+      if (i < groupSize) return { seat: s, pos: "seat-left" };
+      if (i < groupSize * 2) return { seat: s, pos: "seat-top" };
       return { seat: s, pos: "seat-right" };
     });
   };
@@ -43,7 +39,16 @@ export function GameTable({ game, mySeat, showTrick }: GameTableProps) {
   const rightSeats = positions.filter((p) => p.pos === "seat-right");
 
   return (
-    <div className="table-grid">
+    <div className="table-grid" style={{ position: "relative" }}>
+      {/* Dealer Character */}
+      <div className="dealer-container">
+        <img src="/dealer.png" alt="Dealer" className="dealer-img" />
+      </div>
+
+      {isDealing && onDealComplete && (
+        <DealingAnimation onComplete={onDealComplete} />
+      )}
+
       {/* Top row */}
       <div style={{ gridColumn: "2", gridRow: "1", display: "flex", gap: "8px", justifyContent: "center" }}>
         {topSeats.map(({ seat }) => (
