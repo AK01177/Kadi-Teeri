@@ -30,7 +30,7 @@ from game_engine import (
     validate_bid, place_bid, pass_bid,
     validate_trump, select_trump,
     validate_bheru_calls, assign_bherus,
-    validate_play, play_card,
+    validate_play, play_card, resolve_trick,
     deal_new_round, sanitize_game_state,
 )
 from room_manager import room_manager
@@ -323,12 +323,12 @@ async def handle_message(
             suit=msg.suit,
             deck_index=raw_data.get("deck_index", 0),
         )
-        error = game_engine.validate_play(game, seat, card)
+        error = validate_play(game, seat, card)
         if error:
             await ws.send_json({"type": "error", "error": error})
             return
             
-        trick_completed = game_engine.play_card(game, seat, card, auto_resolve=False)
+        trick_completed = play_card(game, seat, card, auto_resolve=False)
         room_manager.save_room(room_id)
         
         # Broadcast the full state including the 4th card
@@ -337,7 +337,7 @@ async def handle_message(
         if trick_completed:
             import asyncio
             await asyncio.sleep(2.0)
-            game_engine.resolve_trick(game)
+            resolve_trick(game)
             room_manager.save_room(room_id)
             await _broadcast_full_state(room_id, game)
 
