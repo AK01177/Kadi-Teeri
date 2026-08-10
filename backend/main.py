@@ -336,7 +336,30 @@ async def handle_message(
         
         if trick_completed:
             import asyncio
+            # First 2s delay: cards sit on the table
             await asyncio.sleep(2.0)
+
+            # Evaluate winner
+            from game_engine import _determine_trick_winner
+            cards_played = game.trick.cards_played
+            lead_suit = game.trick.lead_suit
+            trump = game.trump_suit
+            winner_entry = _determine_trick_winner(cards_played, lead_suit, trump)
+            winner_seat = winner_entry.seat
+            winner_name = game.players[winner_seat].name
+            points = sum(tp.card.points() for tp in cards_played)
+            
+            # Broadcast the popup
+            await ws_manager.broadcast_to_room(room_id, {
+                "type": "trick_winner",
+                "name": winner_name,
+                "points": points
+            })
+            
+            # Second 2s delay: popup shows
+            await asyncio.sleep(2.0)
+
+            # Resolve trick and start next turn
             resolve_trick(game)
             room_manager.save_room(room_id)
             await _broadcast_full_state(room_id, game)
