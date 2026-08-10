@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 import pytest
 from models import Player, GameState, GameStatus, RoomConfig, Card, TrickState, TrickPlay
 from game_engine import (
@@ -86,5 +87,5 @@ def test_kali_teeri_hierarchy():
         TrickPlay(seat=1, card=Card(rank="3", suit="S", deck_index=0)),
     ]
     winner = _determine_trick_winner(cards_played, lead_suit="S", trump="S")
-    # In Kaali Teeri, 3S is the highest card in the game
-    assert winner.seat == 1, "3 of Spades should be the highest trump!"
+    # In Kaali Teeri, 3S is no longer the highest card, it just has standard rank 3
+    assert winner.seat == 0, "Ace of Spades should beat 3 of Spades!"

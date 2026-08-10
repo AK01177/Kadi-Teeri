@@ -530,13 +530,6 @@ def _determine_trick_winner(
     3. DUPLICATE RULE (2-deck): If two identical highest cards exist,
        the one played LATER (higher index) wins.
     """
-    # 3 of Spades is the supreme trump in Kaali Teeri
-    for tp in cards_played:
-        if tp.card.rank == "3" and tp.card.suit == "S":
-            # If there are multiple 3S (2-deck), the last one played wins
-            threes = [x for x in cards_played if x.card.rank == "3" and x.card.suit == "S"]
-            return threes[-1]
-
     trumped = [tp for tp in cards_played if tp.card.suit == trump]
 
     if trumped:
