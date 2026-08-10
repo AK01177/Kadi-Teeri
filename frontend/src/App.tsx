@@ -71,6 +71,21 @@ function App() {
     setSendFn(send);
   }, [send, setSendFn]);
 
+  // Auto-rejoin on reconnect
+  useEffect(() => {
+    if (isConnected) {
+      const state = useGameStore.getState();
+      // If we already have a playerId, it means we were in a session and just reconnected
+      if (state.playerId && state.roomId && send) {
+        send({
+          type: "rejoin",
+          name: state.playerName || "Player",
+          player_id: state.playerId,
+        });
+      }
+    }
+  }, [isConnected, send]);
+
   // Expose connect function for HomePage
   useEffect(() => {
     (window as any).__kadiConnect = (

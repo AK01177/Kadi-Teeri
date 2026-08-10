@@ -1,17 +1,14 @@
 import { PlayerSeat } from "./PlayerSeat";
 import { TrickArea } from "./TrickArea";
-import { DealingAnimation } from "./DealingAnimation";
 import type { GameState } from "../types/game";
 
 interface GameTableProps {
   game: GameState;
   mySeat: number;
   showTrick?: boolean;
-  isDealing?: boolean;
-  onDealComplete?: () => void;
 }
 
-export function GameTable({ game, mySeat, showTrick, isDealing, onDealComplete }: GameTableProps) {
+export function GameTable({ game, mySeat, showTrick }: GameTableProps) {
   const n = game.players.length;
 
   // Arrange seats around the table relative to the current player
@@ -40,15 +37,6 @@ export function GameTable({ game, mySeat, showTrick, isDealing, onDealComplete }
 
   return (
     <div className="table-grid" style={{ position: "relative" }}>
-      {/* Dealer Character */}
-      <div className="dealer-container">
-        <img src="/dealer.png" alt="Dealer" className="dealer-img" />
-      </div>
-
-      {isDealing && onDealComplete && (
-        <DealingAnimation onComplete={onDealComplete} />
-      )}
-
       {/* Top row */}
       <div style={{ gridColumn: "2", gridRow: "1", display: "flex", gap: "8px", justifyContent: "center" }}>
         {topSeats.map(({ seat }) => (

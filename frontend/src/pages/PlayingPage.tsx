@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useGameStore } from "../store/gameStore";
 import { SUIT_SYMBOLS, SUIT_NAMES } from "../types/game";
 import type { Card as CardType } from "../types/game";
@@ -9,17 +8,10 @@ import { ActivityLog } from "../components/ActivityLog";
 export function PlayingPage() {
   const { gameState, hand, seat, sendFn } = useGameStore();
 
-  const [hasDealt, setHasDealt] = useState(false);
-
   if (!gameState || seat === null) return null;
 
   const game = gameState;
-  
-  // If it's not the very start of the game, assume dealing is done
-  const needsDealing = game.trick_number === 1 && (game.trick?.cards_played.length ?? 0) === 0;
-  const isDealing = needsDealing && !hasDealt;
-
-  const myTurn = game.turn_seat === seat && !isDealing;
+  const myTurn = game.turn_seat === seat;
 
   const seatLabel = (s: number) => game.players[s]?.name || `Seat ${s}`;
 
@@ -97,16 +89,10 @@ export function PlayingPage() {
         </div>
       )}
 
-      <GameTable 
-        game={game} 
-        mySeat={seat} 
-        showTrick 
-        isDealing={isDealing}
-        onDealComplete={() => setHasDealt(true)}
-      />
+      <GameTable game={game} mySeat={seat} showTrick />
 
       {/* Local Player Status */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "8px", marginTop: "16px", opacity: isDealing ? 0 : 1, transition: "opacity 0.5s ease" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "8px", marginTop: "16px" }}>
         <div style={{ fontSize: "14px", color: "var(--cream)", fontWeight: 600 }}>
           {seatLabel(seat)} (You)
         </div>
@@ -116,19 +102,17 @@ export function PlayingPage() {
         </div>
       </div>
 
-      <div style={{ opacity: isDealing ? 0 : 1, transition: "opacity 0.5s ease", pointerEvents: isDealing ? "none" : "auto" }}>
-        <Hand
-          cards={hand}
-          legalCards={legalCards}
-          isMyTurn={myTurn}
-          onPlayCard={handlePlayCard}
-          label={
-            game.trick?.lead_suit
-              ? `Must follow ${SUIT_NAMES[game.trick.lead_suit]} if you can`
-              : "Your hand"
-          }
-        />
-      </div>
+      <Hand
+        cards={hand}
+        legalCards={legalCards}
+        isMyTurn={myTurn}
+        onPlayCard={handlePlayCard}
+        label={
+          game.trick?.lead_suit
+            ? `Must follow ${SUIT_NAMES[game.trick.lead_suit]} if you can`
+            : "Your hand"
+        }
+      />
 
       <div style={{ marginTop: "14px" }}>
         <ActivityLog log={game.log} />
