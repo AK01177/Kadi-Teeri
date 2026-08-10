@@ -11,60 +11,66 @@ interface GameTableProps {
 export function GameTable({ game, mySeat, showTrick }: GameTableProps) {
   const n = game.players.length;
 
-  // Arrange seats around the table relative to the current player
-  // For any player count, put "me" at the bottom and distribute others
-  const otherSeats: number[] = [];
-  for (let i = 1; i < n; i++) {
-    otherSeats.push((mySeat + i) % n);
+  // We want to render all players in a circle.
+  const seats = [];
+  for (let i = 0; i < n; i++) {
+    // Offset relative to mySeat
+    const seatIndex = (mySeat + i) % n;
+    
+    // Calculate angle in radians.
+    // mySeat (i=0) is at the bottom (90 degrees, or Math.PI / 2).
+    // Proceeding clockwise increases the angle.
+    const angle = (Math.PI / 2) + (i * 2 * Math.PI) / n;
+    
+    // Radius in percentage from center. 
+    // 42% keeps the seats inside the container.
+    const radius = 42; 
+    const x = 50 + radius * Math.cos(angle);
+    const y = 50 + radius * Math.sin(angle);
+
+    seats.push({
+      seatIndex,
+      player: game.players[seatIndex],
+      x,
+      y
+    });
   }
 
-  // Position assignments based on player count
-  const getPositions = (): { seat: number; pos: string }[] => {
-    return otherSeats.map((s, i) => {
-      // Distribute seats: first ~1/3 on left, middle ~1/3 on top, last ~1/3 on right
-      // This visually creates a clockwise flow: Bottom -> Left -> Top -> Right -> Bottom
-      const groupSize = (n - 1) / 3;
-      if (i < groupSize) return { seat: s, pos: "seat-left" };
-      if (i < groupSize * 2) return { seat: s, pos: "seat-top" };
-      return { seat: s, pos: "seat-right" };
-    });
-  };
-
-  const positions = getPositions();
-  const topSeats = positions.filter((p) => p.pos === "seat-top");
-  const leftSeats = positions.filter((p) => p.pos === "seat-left");
-  const rightSeats = positions.filter((p) => p.pos === "seat-right");
-
   return (
-    <div className="table-grid" style={{ position: "relative" }}>
-      {/* Top row */}
-      <div style={{ gridColumn: "2", gridRow: "1", display: "flex", gap: "8px", justifyContent: "center" }}>
-        {topSeats.map(({ seat }) => (
-          <PlayerSeat
-            key={seat}
-            player={game.players[seat]}
-            game={game}
-            isActive={game.turn_seat === seat}
-            position=""
-          />
-        ))}
-      </div>
-
-      {/* Left */}
-      <div style={{ gridColumn: "1", gridRow: "2", display: "flex", flexDirection: "column", gap: "4px", justifyContent: "center" }}>
-        {leftSeats.map(({ seat }) => (
-          <PlayerSeat
-            key={seat}
-            player={game.players[seat]}
-            game={game}
-            isActive={game.turn_seat === seat}
-            position=""
-          />
-        ))}
-      </div>
+    <div className="round-table">
+      {seats.map(({ seatIndex, player, x, y }) => (
+        <div 
+          key={seatIndex}
+          className="seat-wrapper"
+          style={{
+            position: "absolute",
+            left: `${x}%`,
+            top: `${y}%`,
+            transform: "translate(-50%, -50%)",
+            zIndex: 10
+          }}
+        >
+          {player ? (
+            <PlayerSeat
+              player={player}
+              game={game}
+              isActive={game.turn_seat === seatIndex}
+              position=""
+            />
+          ) : (
+            <div className="seat-box empty">Empty</div>
+          )}
+        </div>
+      ))}
 
       {/* Center — trick area */}
-      <div className="seat-center" style={{ gridColumn: "2", gridRow: "2" }}>
+      <div className="seat-center" style={{
+        position: "absolute",
+        left: "50%",
+        top: "50%",
+        transform: "translate(-50%, -50%)",
+        zIndex: 5
+      }}>
         {showTrick && game.trick ? (
           <TrickArea
             cardsPlayed={game.trick.cards_played}
@@ -77,19 +83,6 @@ export function GameTable({ game, mySeat, showTrick }: GameTableProps) {
             </span>
           </div>
         )}
-      </div>
-
-      {/* Right */}
-      <div style={{ gridColumn: "3", gridRow: "2", display: "flex", flexDirection: "column", gap: "4px", justifyContent: "center" }}>
-        {rightSeats.map(({ seat }) => (
-          <PlayerSeat
-            key={seat}
-            player={game.players[seat]}
-            game={game}
-            isActive={game.turn_seat === seat}
-            position=""
-          />
-        ))}
       </div>
     </div>
   );

@@ -470,18 +470,15 @@ h3 {
   color: var(--teal);
 }
 
-.table-grid {
-  display: grid;
-  grid-template-columns: 1fr 1.5fr 1fr;
-  grid-template-rows: auto auto;
-  gap: 8px;
-  background: radial-gradient(ellipse at center, #1b4b39, #082116 85%);
+.round-table {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1; /* Keep it perfectly circular */
+  max-width: 400px;
+  margin: 0 auto 24px auto;
+  background: radial-gradient(circle at center, #1b4b39, #082116 85%);
   border: 12px solid #3e1f10;
-  /* Rich mahogany wood */
-  border-radius: 120px;
-  /* Proper oval table */
-  padding: 24px 16px;
-  margin-bottom: 24px;
+  border-radius: 50%;
   box-shadow:
     0 10px 30px rgba(0, 0, 0, 0.8),
     inset 0 0 20px rgba(0, 0, 0, 0.9);

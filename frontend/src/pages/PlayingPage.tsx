@@ -114,16 +114,7 @@ export function PlayingPage() {
 
       <GameTable game={game} mySeat={seat} showTrick />
 
-      {/* Local Player Status */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "8px", marginTop: "16px" }}>
-        <div style={{ fontSize: "14px", color: "var(--cream)", fontWeight: 600 }}>
-          {seatLabel(seat)} (You)
-        </div>
-        <div style={{ fontSize: "12px", color: "var(--gold)", fontFamily: "var(--font-mono)", display: "flex", gap: "12px", background: "rgba(0,0,0,0.4)", padding: "4px 10px", borderRadius: "8px", border: "1px solid #3e1f10" }}>
-          <span>{game.hand_sizes?.[seat] ?? 0} cards</span>
-          <span>{game.captured_points?.[seat] ?? 0} pts</span>
-        </div>
-      </div>
+      {/* Local Player visually integrated into GameTable above */}
 
       <Hand
         cards={hand}
