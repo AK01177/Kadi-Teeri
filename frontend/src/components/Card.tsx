@@ -1,4 +1,3 @@
-import { SUIT_SYMBOLS, SUIT_COLORS } from "../types/game";
 import type { Card as CardType } from "../types/game";
 
 interface CardProps {
@@ -9,8 +8,14 @@ interface CardProps {
 }
 
 export function Card({ card, small, disabled, onClick }: CardProps) {
-  const color = SUIT_COLORS[card.suit] || "ink";
-  const sym = SUIT_SYMBOLS[card.suit] || card.suit;
+  const suitNameMap: Record<string, string> = {
+    C: "clubs",
+    D: "diamonds",
+    H: "hearts",
+    S: "spades",
+  };
+  const suitName = suitNameMap[card.suit];
+  const imgSrc = `/CardsPNG/${suitName}_${card.rank}.png`;
   const isTeeri = card.rank === "3" && card.suit === "S";
 
   return (
@@ -20,18 +25,12 @@ export function Card({ card, small, disabled, onClick }: CardProps) {
       disabled={disabled}
       onClick={disabled ? undefined : onClick}
     >
-      <div className={`card-face ${color}${isTeeri ? " teeri" : ""}`}>
-        <span className="pip pip-tl">
-          {card.rank}
-          <br />
-          {sym}
-        </span>
-        <span className="pip-center">{sym}</span>
-        <span className="pip pip-br">
-          {card.rank}
-          <br />
-          {sym}
-        </span>
+      <div className={`card-face ${isTeeri ? " teeri" : ""}`} style={{ background: 'transparent', boxShadow: 'none' }}>
+        <img 
+           src={imgSrc} 
+           alt={`${card.rank} of ${suitName}`} 
+           style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} 
+        />
         {isTeeri && <span className="teeri-badge">30</span>}
       </div>
     </button>
@@ -41,7 +40,13 @@ export function Card({ card, small, disabled, onClick }: CardProps) {
 export function CardBack({ small }: { small?: boolean }) {
   return (
     <div className={`card${small ? " card-sm" : ""}`}>
-      <div className="card-back" />
+      <div className="card-face" style={{ background: 'transparent', boxShadow: 'none' }}>
+        <img 
+           src="/CardsPNG/back_light.png" 
+           alt="Card Back" 
+           style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} 
+        />
+      </div>
     </div>
   );
 }
