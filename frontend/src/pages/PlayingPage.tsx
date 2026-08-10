@@ -6,7 +6,7 @@ import { Hand } from "../components/Hand";
 import { ActivityLog } from "../components/ActivityLog";
 
 export function PlayingPage() {
-  const { gameState, hand, seat, sendFn, trickWinner } = useGameStore();
+  const { gameState, hand, seat, sendFn, trickWinner, is3DView } = useGameStore();
 
   if (!gameState || seat === null) return null;
 
@@ -112,21 +112,31 @@ export function PlayingPage() {
         </div>
       )}
 
-      <GameTable game={game} mySeat={seat} showTrick />
+      <GameTable 
+        game={game} 
+        mySeat={seat} 
+        showTrick 
+        hand={hand} 
+        legalCards={legalCards} 
+        isMyTurn={myTurn} 
+        onPlayCard={handlePlayCard} 
+      />
 
       {/* Local Player visually integrated into GameTable above */}
 
-      <Hand
-        cards={hand}
-        legalCards={legalCards}
-        isMyTurn={myTurn}
-        onPlayCard={handlePlayCard}
-        label={
-          game.trick?.lead_suit
-            ? `Must follow ${SUIT_NAMES[game.trick.lead_suit]} if you can`
-            : "Your hand"
-        }
-      />
+      {!is3DView && (
+        <Hand
+          cards={hand}
+          legalCards={legalCards}
+          isMyTurn={myTurn}
+          onPlayCard={handlePlayCard}
+          label={
+            game.trick?.lead_suit
+              ? `Must follow ${SUIT_NAMES[game.trick.lead_suit]} if you can`
+              : "Your hand"
+          }
+        />
+      )}
 
       <div style={{ marginTop: "14px" }}>
         <ActivityLog log={game.log} />

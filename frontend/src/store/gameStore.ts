@@ -33,6 +33,10 @@ interface GameStore {
   trickWinner: { name: string; points: number } | null;
   setTrickWinner: (v: { name: string; points: number } | null) => void;
 
+  // View Settings
+  is3DView: boolean;
+  setIs3DView: (v: boolean) => void;
+
   // Local UI state
   pendingBid: number | null;
   setPendingBid: (v: number | null) => void;
@@ -111,6 +115,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   trickWinner: null,
   setTrickWinner: (v) => set({ trickWinner: v }),
+
+  // View Settings
+  is3DView: true,
+  setIs3DView: (v) => set({ is3DView: v }),
 
   // Local UI state
   pendingBid: null,

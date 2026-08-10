@@ -27,6 +27,8 @@ function App() {
     setSendFn,
     showToast,
     leaveRoom,
+    is3DView,
+    setIs3DView,
   } = useGameStore();
 
   const onMessage = useCallback(
@@ -225,6 +227,13 @@ function App() {
             })}
           </div>
           <span className="spacer" />
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => setIs3DView(!is3DView)}
+            title="Toggle 3D View"
+          >
+            {is3DView ? "2D View" : "3D View"}
+          </button>
           {!isConnected && (
             <span
               style={{

@@ -1,29 +1,33 @@
 import { PlayerSeat } from "./PlayerSeat";
 import { TrickArea } from "./TrickArea";
-import type { GameState } from "../types/game";
+import type { GameState, Card as CardType } from "../types/game";
+import { useGameStore } from "../store/gameStore";
+import { GameTable3D } from "./GameTable3D";
 
 interface GameTableProps {
   game: GameState;
   mySeat: number;
   showTrick?: boolean;
+  hand?: CardType[];
+  legalCards?: CardType[];
+  isMyTurn?: boolean;
+  onPlayCard?: (card: CardType) => void;
 }
 
-export function GameTable({ game, mySeat, showTrick }: GameTableProps) {
+export function GameTable({ game, mySeat, showTrick, hand, legalCards, isMyTurn, onPlayCard }: GameTableProps) {
+  const is3DView = useGameStore((s) => s.is3DView);
+
+  if (is3DView) {
+    return <GameTable3D game={game} mySeat={mySeat} showTrick={showTrick} hand={hand} legalCards={legalCards} isMyTurn={isMyTurn} onPlayCard={onPlayCard} />;
+  }
+
   const n = game.players.length;
 
   // We want to render all players in a circle.
   const seats = [];
   for (let i = 0; i < n; i++) {
-    // Offset relative to mySeat
     const seatIndex = (mySeat + i) % n;
-    
-    // Calculate angle in radians.
-    // mySeat (i=0) is at the bottom (90 degrees, or Math.PI / 2).
-    // Proceeding clockwise increases the angle.
     const angle = (Math.PI / 2) + (i * 2 * Math.PI) / n;
-    
-    // Radius in percentage from center. 
-    // 42% keeps the seats inside the container.
     const radius = 42; 
     const x = 50 + radius * Math.cos(angle);
     const y = 50 + radius * Math.sin(angle);
