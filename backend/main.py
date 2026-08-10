@@ -350,7 +350,7 @@ async def handle_message(
             points = sum(tp.card.points() for tp in cards_played)
             
             # Broadcast the popup
-            await ws_manager.broadcast_to_room(room_id, {
+            await ws_manager.broadcast(room_id, {
                 "type": "trick_winner",
                 "name": winner_name,
                 "points": points
