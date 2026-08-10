@@ -375,7 +375,14 @@ async def serve_spa(full_path: str):
     # Otherwise, return index.html for React Router to handle
     index_path = os.path.join(static_dir, "index.html")
     if os.path.isfile(index_path):
-        return FileResponse(index_path)
+        return FileResponse(
+            index_path,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0",
+            }
+        )
         
     return {"error": "Frontend not built. Run 'npm run build' in the frontend directory."}
 
