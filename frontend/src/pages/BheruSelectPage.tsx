@@ -32,6 +32,7 @@ export function BheruSelectPage() {
   const deckCount = game.config.deck_count;
   const numPlayers = game.players.length;
   const maxBherus = Math.floor(numPlayers / 2) - 1;
+  const totalBherusRequested = selectedBheruCalls.reduce((sum, call) => sum + (call.mode === "both" ? 2 : 1), 0);
 
   const seatLabel = (s: number) => game.players[s]?.name || `Seat ${s}`;
 
@@ -48,12 +49,6 @@ export function BheruSelectPage() {
       return;
     }
 
-    // Check max
-    if (selectedBheruCalls.length >= maxBherus) {
-      showToast(`You can call at most ${maxBherus} bheru(s).`);
-      return;
-    }
-
     // Determine mode
     let mode: BheruCallMode;
     if (deckCount === 1) {
@@ -62,6 +57,15 @@ export function BheruSelectPage() {
       // 2-deck: default to "fix" if player owns one copy, otherwise "both"
       const hasCard = ownCards.has(`${rank}:${suit}`);
       mode = hasCard ? "fix" : "both";
+      if (mode === "both" && totalBherusRequested + 2 > maxBherus) {
+          mode = "second";
+      }
+    }
+
+    const cost = mode === "both" ? 2 : 1;
+    if (totalBherusRequested + cost > maxBherus) {
+      showToast(`You can call at most ${maxBherus} bheru(s).`);
+      return;
     }
 
     addBheruCall({ rank, suit, mode });
@@ -72,6 +76,12 @@ export function BheruSelectPage() {
       (c) => c.rank === rank && c.suit === suit
     );
     if (existing) {
+      const currentCost = existing.mode === "both" ? 2 : 1;
+      const newCost = mode === "both" ? 2 : 1;
+      if (totalBherusRequested - currentCost + newCost > maxBherus) {
+        showToast(`You can call at most ${maxBherus} bheru(s).`);
+        return;
+      }
       removeBheruCall(rank, suit);
       addBheruCall({ rank, suit, mode });
     }
@@ -192,6 +202,7 @@ export function BheruSelectPage() {
                         <button
                           className={`btn btn-sm${call.mode === "both" ? " btn-primary" : ""}`}
                           onClick={() => handleModeChange(call.rank, call.suit, "both")}
+                          disabled={call.mode !== "both" && totalBherusRequested + 1 > maxBherus}
                           style={{ padding: "4px 8px", fontSize: "11px" }}
                         >
                           Both
@@ -228,7 +239,7 @@ export function BheruSelectPage() {
             <button
               className="btn btn-primary"
               onClick={confirmBherus}
-              disabled={selectedBheruCalls.length !== maxBherus}
+              disabled={totalBherusRequested !== maxBherus}
               style={{ flex: 2 }}
             >
               Confirm {maxBherus} bheru(s)

@@ -232,8 +232,10 @@ def validate_bheru_calls(
     n = len(game.players)
     max_b = max_bherus(n)
 
-    if len(calls) > max_b:
-        return f"You can call at most {max_b} bheru(s)."
+    total_requested = sum(2 if c.mode == BheruCallMode.BOTH else 1 for c in calls)
+
+    if total_requested != max_b and total_requested != 0:
+        return f"You must call exactly {max_b} bheru(s), or go Solo."
 
     deck_count = game.config.deck_count
 
