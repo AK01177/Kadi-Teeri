@@ -58,7 +58,7 @@ export function BheruSelectPage() {
       const hasCard = ownCards.has(`${rank}:${suit}`);
       mode = hasCard ? "fix" : "both";
       if (mode === "both" && totalBherusRequested + 2 > maxBherus) {
-          mode = "second";
+        mode = "second";
       }
     }
 
@@ -154,9 +154,8 @@ export function BheruSelectPage() {
               return (
                 <button
                   key={r}
-                  className={`rank-btn${isSelected ? " selected" : ""}${
-                    isOwn ? " own" : ""
-                  }`}
+                  className={`rank-btn${isSelected ? " selected" : ""}${isOwn ? " own" : ""
+                    }`}
                   onClick={() => handleSelectCard(r, bheruTabSuit)}
                 >
                   {r}
