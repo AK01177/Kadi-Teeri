@@ -27,24 +27,38 @@ export function PlayingPage() {
     });
   };
 
-  const amIBheru =
-    !game.is_solo &&
-    game.bherus.some(
-      (b) => !b.revealed && b.holder_seat === seat
-    );
-  const revealedBherus = game.bherus.filter((b) => b.revealed && b.holder_seat !== undefined);
+  // Check if we hold any of the unrevealed bherus
+  const mySecretBherus = game.bherus.filter(b => {
+    if (b.revealed) return false;
+    return hand.some(c => c.rank === b.call.rank && c.suit === b.call.suit);
+  });
+  
+  const amIBheru = !game.is_solo && mySecretBherus.length > 0;
+  
+  const bheruMessage = () => {
+    if (mySecretBherus.some(b => b.call.mode !== "second")) {
+      return "You are the secret partner!";
+    }
+    // All our held bherus are 'second' mode
+    return "You can be the secret partner if you play it second!";
+  };
 
-  // The server sends bherus with holder_seat only when revealed
-  // We need to check if we are a secret bheru from our hand
-  // This is handled by the server sending a special indicator
-  // For now, we rely on the bheru being revealed or not
+  const revealedBherus = game.bherus.filter((b) => b.revealed && b.holder_seat !== undefined);
 
   return (
     <>
-      <div className="status-bar">
+      <div className="status-bar" style={{ flexWrap: "wrap" }}>
         <span className="badge trump">
           Trump {SUIT_SYMBOLS[game.trump_suit!]}
         </span>
+        
+        {/* Show Bheru Calls */}
+        {!game.is_solo && game.bherus.length > 0 && (
+          <span className="badge" style={{ background: "rgba(63, 185, 166, 0.2)", color: "var(--teal)", borderColor: "var(--teal)" }}>
+            Calls: {game.bherus.map(b => `${b.call.rank}${SUIT_SYMBOLS[b.call.suit]}`).join(", ")}
+          </span>
+        )}
+
         <span className="badge target">Target {game.bid_target}</span>
         <span className="badge">
           Trick {game.trick_number}/
@@ -64,7 +78,7 @@ export function PlayingPage() {
       {/* Secret partner banner */}
       {amIBheru && (
         <div className="secret-banner">
-          You are the secret partner!
+          {bheruMessage()}
         </div>
       )}
 

@@ -419,8 +419,8 @@ def validate_play(game: GameState, seat: int, card: Card) -> Optional[str]:
     return None
 
 
-def play_card(game: GameState, seat: int, card: Card) -> None:
-    """Play a card in the current trick."""
+def play_card(game: GameState, seat: int, card: Card, auto_resolve: bool = True) -> bool:
+    """Play a card in the current trick. Returns True if the trick is complete."""
     n = len(game.players)
     hand = game.hands[seat]
 
@@ -442,10 +442,13 @@ def play_card(game: GameState, seat: int, card: Card) -> None:
 
     # Check if trick is complete
     if len(game.trick.cards_played) == n:
-        resolve_trick(game)
+        if auto_resolve:
+            resolve_trick(game)
+        return True
     else:
         # Next player's turn
         game.turn_seat = (seat + 1) % n
+        return False
 
 
 def _check_bheru_reveal(game: GameState, seat: int, card: Card) -> None:

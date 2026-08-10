@@ -323,13 +323,23 @@ async def handle_message(
             suit=msg.suit,
             deck_index=raw_data.get("deck_index", 0),
         )
-        error = validate_play(game, seat, card)
+        error = game_engine.validate_play(game, seat, card)
         if error:
             await ws.send_json({"type": "error", "error": error})
             return
-        play_card(game, seat, card)
+            
+        trick_completed = game_engine.play_card(game, seat, card, auto_resolve=False)
         room_manager.save_room(room_id)
+        
+        # Broadcast the full state including the 4th card
         await _broadcast_full_state(room_id, game)
+        
+        if trick_completed:
+            import asyncio
+            await asyncio.sleep(2.0)
+            game_engine.resolve_trick(game)
+            room_manager.save_room(room_id)
+            await _broadcast_full_state(room_id, game)
 
     elif msg.type == "restart":
         error = room_manager.restart_game(room_id, player_id)

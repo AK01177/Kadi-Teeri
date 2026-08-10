@@ -220,20 +220,18 @@ export function BheruSelectPage() {
           )}
 
           {/* Info text */}
-          {selectedBheruCalls.length > 0 && (
-            <p className="muted" style={{ fontSize: "12.5px", margin: "8px 0" }}>
-              {selectedBheruCalls.length} bheru(s) selected. Confirm to start playing.
-            </p>
-          )}
+          <p className="muted" style={{ fontSize: "12.5px", margin: "8px 0" }}>
+            You must select exactly {maxBherus} bheru(s).
+          </p>
 
           <div className="row" style={{ gap: "8px" }}>
             <button
               className="btn btn-primary"
               onClick={confirmBherus}
-              disabled={selectedBheruCalls.length === 0}
+              disabled={selectedBheruCalls.length !== maxBherus}
               style={{ flex: 2 }}
             >
-              Confirm {selectedBheruCalls.length} bheru(s)
+              Confirm {maxBherus} bheru(s)
             </button>
             <button
               className="btn btn-ghost"
