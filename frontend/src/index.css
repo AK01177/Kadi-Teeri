@@ -86,18 +86,12 @@ input {
 #app {
   max-width: 640px;
   margin: 0 auto;
-  padding: 12px 12px 32px;
+  padding: clamp(8px, 2vw, 24px) clamp(8px, 3vw, 24px) clamp(24px, 4vh, 48px);
   min-height: 100vh;
   min-height: 100dvh;
   position: relative;
 }
 
-@media (min-width: 768px) {
-  #app {
-    max-width: 720px;
-    padding: 24px 24px 48px;
-  }
-}
 
 /* ─── Shared ─── */
 
@@ -244,7 +238,7 @@ h3 {
 
 .hero {
   text-align: center;
-  padding: 38px 6px 22px;
+  padding: clamp(16px, 4vh, 38px) 6px clamp(12px, 2vh, 22px);
 }
 
 .logo-mark {
@@ -253,7 +247,7 @@ h3 {
 }
 
 .hero h1 {
-  font-size: 44px;
+  font-size: clamp(28px, 8vw, 44px);
   letter-spacing: -0.01em;
   color: var(--cream);
 }
@@ -261,7 +255,7 @@ h3 {
 .hero .tag {
   font-family: var(--font-body);
   color: var(--muted);
-  font-size: 15px;
+  font-size: clamp(12px, 3.5vw, 15px);
   margin-top: 8px;
   line-height: 1.5;
 }
@@ -324,7 +318,7 @@ h3 {
 .topbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: clamp(4px, 1.5vw, 10px);
   margin-bottom: 12px;
   flex-wrap: wrap;
   position: sticky;
@@ -342,17 +336,17 @@ h3 {
   background: var(--panel-2);
   border: 1px dashed var(--gold);
   color: var(--gold);
-  padding: 5px 8px;
+  padding: clamp(3px, 1vw, 6px) clamp(6px, 1.5vw, 10px);
   border-radius: 8px;
-  font-size: 12px;
+  font-size: clamp(10px, 2.8vw, 14px);
 }
 
 .leaderboard {
   display: flex;
-  gap: 4px;
+  gap: clamp(3px, 1vw, 6px);
   flex-wrap: wrap;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: clamp(9px, 2.5vw, 11.5px);
 }
 
 .lb-pill {
@@ -458,11 +452,11 @@ h3 {
 
 .turn-banner {
   text-align: center;
-  padding: 10px;
+  padding: clamp(7px, 2vw, 10px);
   border-radius: 10px;
-  margin-bottom: 14px;
+  margin-bottom: clamp(8px, 2vw, 14px);
   font-weight: 600;
-  font-size: 14.5px;
+  font-size: clamp(12px, 3.5vw, 14.5px);
   border: 1px solid var(--border);
   background: var(--panel);
 }
@@ -475,10 +469,10 @@ h3 {
 
 .secret-banner {
   text-align: center;
-  padding: 9px;
+  padding: clamp(6px, 1.5vw, 9px);
   border-radius: 10px;
-  margin-bottom: 14px;
-  font-size: 13px;
+  margin-bottom: clamp(8px, 2vw, 14px);
+  font-size: clamp(11px, 3vw, 13px);
   background: var(--teal-soft);
   border: 1px solid var(--teal);
   color: var(--teal);
@@ -487,11 +481,11 @@ h3 {
 .round-table {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1; /* Keep it perfectly circular */
-  max-width: 400px;
-  margin: 0 auto 24px auto;
+  aspect-ratio: 1 / 1;
+  max-width: min(400px, 85vw);
+  margin: 0 auto clamp(12px, 3vw, 24px) auto;
   background: radial-gradient(circle at center, #1b4b39, #082116 85%);
-  border: 12px solid #3e1f10;
+  border: clamp(6px, 2vw, 12px) solid #3e1f10;
   border-radius: 50%;
   box-shadow:
     0 10px 30px rgba(0, 0, 0, 0.8),
@@ -503,18 +497,18 @@ h3 {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 8px 12px;
+  padding: clamp(5px, 1.5vw, 8px) clamp(8px, 2vw, 12px);
   border-radius: 8px;
   background: linear-gradient(180deg, #1f2a24, #0e1512);
   border: 1px solid var(--gold);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
-  min-width: 80px;
+  min-width: clamp(56px, 16vw, 80px);
 }
 
 .seat-box .nm {
-  font-size: 12.5px;
+  font-size: clamp(10px, 2.8vw, 12.5px);
   font-weight: 600;
-  max-width: 78px;
+  max-width: clamp(56px, 16vw, 78px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -564,8 +558,8 @@ h3 {
 /* ─── Cards ─── */
 
 .card {
-  --cw: 58px;
-  --ch: 82px;
+  --cw: clamp(46px, 13vw, 62px);
+  --ch: clamp(65px, 18.5vw, 88px);
   width: var(--cw);
   height: var(--ch);
   border-radius: 7px;
@@ -578,8 +572,8 @@ h3 {
 }
 
 .card.card-sm {
-  --cw: 38px;
-  --ch: 54px;
+  --cw: clamp(32px, 9vw, 42px);
+  --ch: clamp(45px, 13vw, 60px);
 }
 
 .card-face {
@@ -1021,98 +1015,23 @@ details.log-details summary {
   }
 }
 
-/* ─── Mobile Optimizations (< 480px) ─── */
+/* ─── Universal Mobile Responsive ─── */
+/* Uses fluid values via clamp() above — no breakpoints needed for core layout.
+   These handle edge-case overrides only. */
 
 @media (max-width: 480px) {
-  .hero h1 {
-    font-size: 32px;
-  }
-
-  .hero .tag {
-    font-size: 13px;
-  }
-
-  .hero {
-    padding: 24px 4px 16px;
-  }
-
-  /* Larger cards on mobile for easier tapping */
-  .card {
-    --cw: 54px;
-    --ch: 76px;
-  }
-
-  .card.card-sm {
-    --cw: 36px;
-    --ch: 50px;
-  }
-
-  /* Make the round table scale to fit */
-  .round-table {
-    max-width: 320px;
-    border-width: 8px;
-    margin-bottom: 16px;
-  }
-
-  /* Compact seat boxes */
-  .seat-box {
-    padding: 6px 8px;
-    min-width: 64px;
-  }
-
-  .seat-box .nm {
-    font-size: 11px;
-    max-width: 64px;
-  }
-
-  /* Bigger step buttons for bidding */
-  .step-btn {
-    width: 50px;
-    height: 50px;
-    font-size: 22px;
-  }
-
-  .stepper .amount {
-    font-size: 26px;
-    min-width: 70px;
-  }
-
-  /* Compact status bar */
-  .status-bar {
-    gap: 6px;
-    margin-bottom: 10px;
-  }
-
-  .badge {
-    font-size: 10px;
-    padding: 4px 7px;
-  }
-
-  /* Smaller banners */
-  .turn-banner {
-    padding: 8px;
-    font-size: 13px;
-    margin-bottom: 10px;
-  }
-
-  .secret-banner {
-    padding: 7px;
-    font-size: 12px;
-    margin-bottom: 10px;
-  }
-
   /* Trick winner overlay */
   .trick-winner-overlay {
     padding: 18px 24px;
-    max-width: 85vw;
+    max-width: 88vw;
   }
 
   .winner-content h2 {
-    font-size: 18px;
+    font-size: clamp(16px, 5vw, 22px);
   }
 
   .winner-content p {
-    font-size: 16px;
+    font-size: clamp(14px, 4.5vw, 18px);
   }
 
   /* Compact activity log */
@@ -1121,49 +1040,44 @@ details.log-details summary {
     font-size: 10.5px;
   }
 
-  /* Suit grid compactness */
-  .suit-btn {
-    padding: 12px 4px;
-    font-size: 22px;
-  }
-
   /* Rank grid */
   .rank-grid {
-    grid-template-columns: repeat(7, 1fr);
     gap: 4px;
   }
 
   .rank-btn {
-    font-size: 12px;
+    font-size: clamp(11px, 3vw, 13px);
+  }
+
+  .suit-btn {
+    padding: clamp(10px, 3vw, 16px) 4px;
+    font-size: clamp(18px, 6vw, 26px);
   }
 }
 
-/* ─── Extra small screens (< 360px, e.g. iPhone SE) ─── */
-
-@media (max-width: 360px) {
-  .card {
-    --cw: 48px;
-    --ch: 68px;
-  }
-
+/* ─── Landscape phones ─── */
+@media (max-height: 500px) and (orientation: landscape) {
   .round-table {
-    max-width: 280px;
+    max-width: min(280px, 50vh);
   }
 
-  .hero h1 {
-    font-size: 28px;
+  .hand-row {
+    padding: 4px 2px 6px;
   }
 
-  .topbar {
-    gap: 4px;
+  .card {
+    --cw: clamp(36px, 8vh, 52px);
+    --ch: clamp(51px, 11vh, 74px);
+  }
+}
+
+/* ─── Tablets and large screens ─── */
+@media (min-width: 768px) {
+  #app {
+    max-width: 720px;
   }
 
-  .code-chip {
-    font-size: 10px;
-    padding: 4px 6px;
-  }
-
-  .leaderboard {
-    font-size: 9px;
+  .trick-winner-overlay {
+    max-width: 400px;
   }
 }
