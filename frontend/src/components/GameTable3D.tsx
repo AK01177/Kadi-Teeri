@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useCallback } from "react";
+import { Suspense, useMemo, useCallback, useState, useEffect } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { PerspectiveCamera, Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -42,6 +42,30 @@ export function GameTable3D({
   onClose,
 }: GameTable3DProps) {
   const n = game.players.length;
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.warn(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
 
   /* ═══════════════════════════════════════════
      Opponent positions — 180° arc on far side
@@ -90,11 +114,11 @@ export function GameTable3D({
       play,
       position: [
         startX + i * spacing,
-        0.02 + i * 0.004,
+        0.02 + i * 0.02,
         -0.5 + (i - (count - 1) / 2) * 0.12,
       ] as [number, number, number],
       rotation: [
-        -Math.PI / 2 + 0.15, // tilted slightly toward camera
+        -Math.PI / 2 + 0.05, // Flatter, less extreme upward tilt
         0,
         (i - (count - 1) / 2) * 0.06, // slight fan
       ] as [number, number, number],
@@ -154,6 +178,7 @@ export function GameTable3D({
     <div className="game3d-fullscreen">
       {/* ════════════════════════ 3D CANVAS ════════════════════════ */}
       <Canvas
+        shadows
         flat
         frameloop="demand"
         dpr={[1, 1.5]}
@@ -174,23 +199,32 @@ export function GameTable3D({
         />
         <InvalidateOnMount />
 
-        {/* ── Lighting: bright for vivid cards, no shadows ── */}
-        <ambientLight intensity={1.4} />
-        <directionalLight position={[3, 8, 5]} intensity={0.7} />
-        <directionalLight position={[-3, 6, -3]} intensity={0.3} />
+        {/* ── Lighting: bright for vivid cards, with shadows ── */}
+        <ambientLight intensity={1.1} />
+        <directionalLight 
+          position={[3, 8, 5]} 
+          intensity={0.9} 
+          castShadow 
+          shadow-mapSize={[1024, 1024]}
+          shadow-camera-left={-8}
+          shadow-camera-right={8}
+          shadow-camera-top={8}
+          shadow-camera-bottom={-8}
+        />
+        <directionalLight position={[-3, 6, -3]} intensity={0.4} />
 
         {/* ═════════════ TABLE ═════════════ */}
 
         {/* Felt surface */}
-        <mesh position={[0, -0.08, -0.5]}>
+        <mesh receiveShadow position={[0, -0.08, -0.5]}>
           <cylinderGeometry args={[4.5, 4.5, 0.16, 48]} />
-          <meshLambertMaterial color="#1a6b42" />
+          <meshStandardMaterial color="#1a6b42" roughness={0.85} />
         </mesh>
 
         {/* Wooden rim */}
-        <mesh position={[0, -0.12, -0.5]}>
+        <mesh receiveShadow position={[0, -0.12, -0.5]}>
           <cylinderGeometry args={[4.8, 4.8, 0.24, 48]} />
-          <meshLambertMaterial color="#5a2d0c" />
+          <meshStandardMaterial color="#5a2d0c" roughness={0.6} />
         </mesh>
 
         {/* Inner decorative ring */}
@@ -400,13 +434,22 @@ export function GameTable3D({
             </span>
           )}
         </div>
-        <button
-          className="game3d-close-btn"
-          onClick={onClose}
-          title="Exit 3D View"
-        >
-          ✕
-        </button>
+        <div style={{ display: 'flex', gap: '8px', pointerEvents: 'auto' }}>
+          <button
+            className="game3d-close-btn"
+            onClick={toggleFullscreen}
+            title="Toggle Fullscreen"
+          >
+            {isFullscreen ? "↙" : "⤢"}
+          </button>
+          <button
+            className="game3d-close-btn"
+            onClick={onClose}
+            title="Exit 3D View"
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
       {/* ════════════════════════ INFO BANNERS ════════════════════════ */}

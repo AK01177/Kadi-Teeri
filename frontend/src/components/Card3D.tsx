@@ -117,6 +117,8 @@ export function Card3D({
 
   return (
     <a.mesh
+      castShadow
+      receiveShadow
       geometry={CARD_BOX}
       material={materials}
       position={spring.pos as any}
