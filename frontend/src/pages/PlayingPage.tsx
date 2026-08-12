@@ -5,9 +5,13 @@ import { GameTable } from "../components/GameTable";
 import { GameTable3D } from "../components/GameTable3D";
 import { Hand } from "../components/Hand";
 import { ActivityLog } from "../components/ActivityLog";
+import { useSoundEffects } from "../hooks/useSoundEffects";
 
 export function PlayingPage() {
   const { gameState, hand, seat, sendFn, trickWinner, is3DView, setIs3DView } = useGameStore();
+
+  // Activate sounds & haptics for the game
+  useSoundEffects();
 
   if (!gameState || seat === null) return null;
 
