@@ -32,9 +32,9 @@ export function PlayingPage() {
     if (b.revealed) return false;
     return hand.some(c => c.rank === b.call.rank && c.suit === b.call.suit);
   });
-  
+
   const amIBheru = !game.is_solo && mySecretBherus.length > 0;
-  
+
   const bheruMessage = () => {
     if (mySecretBherus.some(b => b.call.mode !== "second")) {
       return "You are the secret partner!";
@@ -60,7 +60,7 @@ export function PlayingPage() {
         <span className="badge trump">
           Trump {SUIT_SYMBOLS[game.trump_suit!]}
         </span>
-        
+
         {/* Show Bheru Calls */}
         {!game.is_solo && game.bherus.length > 0 && (
           <span className="badge" style={{ background: "rgba(63, 185, 166, 0.2)", color: "var(--teal)", borderColor: "var(--teal)" }}>
@@ -112,10 +112,10 @@ export function PlayingPage() {
         </div>
       )}
 
-      <GameTable 
-        game={game} 
-        mySeat={seat} 
-        showTrick 
+      <GameTable
+        game={game}
+        mySeat={seat}
+        showTrick
       />
 
       {/* Spacer for 3D View to push the hand to the bottom of the screen */}

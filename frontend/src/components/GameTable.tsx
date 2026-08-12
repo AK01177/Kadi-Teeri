@@ -1,6 +1,6 @@
 import { PlayerSeat } from "./PlayerSeat";
 import { TrickArea } from "./TrickArea";
-import type { GameState, Card as CardType } from "../types/game";
+import type { GameState } from "../types/game";
 import { useGameStore } from "../store/gameStore";
 import { GameTable3D } from "./GameTable3D";
 
