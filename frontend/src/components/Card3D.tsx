@@ -1,8 +1,8 @@
+import { useMemo, useEffect, useState } from "react";
 import { useTexture } from "@react-three/drei";
 import { useSpring, a } from "@react-spring/three";
 import { useThree } from "@react-three/fiber";
 import type { Card as CardType } from "../types/game";
-import { useEffect, useState, useMemo } from "react";
 import * as THREE from "three";
 
 interface Card3DProps {
@@ -10,8 +10,10 @@ interface Card3DProps {
   position: [number, number, number];
   rotation: [number, number, number];
   index: number;
-  /** If true, show the card back instead of the face */
+  /** If true, show the card back on the upward-facing side */
   faceDown?: boolean;
+  /** Uniform scale multiplier (default 1) */
+  scale?: number;
 }
 
 const SUIT_MAP: Record<string, string> = {
@@ -21,11 +23,28 @@ const SUIT_MAP: Record<string, string> = {
   S: "spades",
 };
 
-// Shared geometry — all cards reuse the exact same PlaneGeometry instance
-const CARD_GEO = new THREE.PlaneGeometry(1, 1.4);
+/* ── Shared geometry: real card with thickness ── */
+const CARD_W = 1;
+const CARD_H = 1.4;
+const CARD_D = 0.025;
+const CARD_BOX = new THREE.BoxGeometry(CARD_W, CARD_H, CARD_D);
 
-export function Card3D({ card, position, rotation, index, faceDown = false }: Card3DProps) {
-  const suitName = SUIT_MAP[card.suit];
+/* ── Shared edge material (cream-coloured card stock) ── */
+const EDGE_MAT = new THREE.MeshStandardMaterial({
+  color: "#f0e8d0",
+  roughness: 0.6,
+  metalness: 0,
+});
+
+export function Card3D({
+  card,
+  position,
+  rotation,
+  index,
+  faceDown = false,
+  scale: targetScale = 1,
+}: Card3DProps) {
+  const suitName = SUIT_MAP[card.suit] || "spades";
   const faceSrc = `/CardsPNG/${suitName}_${card.rank}.png`;
   const backSrc = `/CardsPNG/back_light.png`;
 
@@ -37,35 +56,72 @@ export function Card3D({ card, position, rotation, index, faceDown = false }: Ca
   useEffect(() => {
     const t = setTimeout(() => {
       setDealt(true);
-      invalidate(); // trigger a re-render in demand mode
-    }, 80 + index * 60);
+      invalidate();
+    }, 60 + index * 50);
     return () => clearTimeout(t);
   }, [index, invalidate]);
 
-  // MeshBasicMaterial: no lighting calculations, 3x faster on mobile
-  const material = useMemo(() => {
-    const tex = faceDown ? backTex : faceTex;
-    return new THREE.MeshBasicMaterial({
-      map: tex,
-      side: THREE.FrontSide,
+  /* ── Ensure vivid colours via sRGB colour space ── */
+  useMemo(() => {
+    faceTex.colorSpace = THREE.SRGBColorSpace;
+    backTex.colorSpace = THREE.SRGBColorSpace;
+    faceTex.minFilter = THREE.LinearFilter;
+    faceTex.magFilter = THREE.LinearFilter;
+    backTex.minFilter = THREE.LinearFilter;
+    backTex.magFilter = THREE.LinearFilter;
+    faceTex.needsUpdate = true;
+    backTex.needsUpdate = true;
+  }, [faceTex, backTex]);
+
+  /*
+   * Materials order for BoxGeometry:
+   *   [0]+x  [1]-x  [2]+y  [3]-y  [4]+z(front)  [5]-z(back)
+   *
+   * When laid flat with rotation [-PI/2, 0, 0]:
+   *   +z → upward (visible to camera)
+   *   -z → downward (hidden against table)
+   *
+   * faceDown=false → +z shows card face (faceTex)
+   * faceDown=true  → +z shows card back (backTex)
+   */
+  const materials = useMemo(() => {
+    const topMap = faceDown ? backTex : faceTex;
+    const botMap = faceDown ? faceTex : backTex;
+
+    const topMat = new THREE.MeshStandardMaterial({
+      map: topMap,
+      roughness: 0.3,
+      metalness: 0,
     });
+    const botMat = new THREE.MeshStandardMaterial({
+      map: botMap,
+      roughness: 0.4,
+      metalness: 0,
+    });
+
+    return [EDGE_MAT, EDGE_MAT, EDGE_MAT, EDGE_MAT, topMat, botMat];
   }, [faceTex, backTex, faceDown]);
 
+  /* ── Spring: deal-in animation ── */
   const spring = useSpring({
-    position: dealt ? position : [0, -3, position[2]],
-    rotation: dealt ? rotation : [-Math.PI / 6, 0, 0],
-    scale: dealt ? 1 : 0.3,
-    config: { mass: 0.8, tension: 180, friction: 22 },
-    onChange: () => invalidate(), // re-render on each animation frame
+    pos: dealt
+      ? position
+      : ([position[0], position[1] - 2, position[2] + 1.5] as [number, number, number]),
+    rot: dealt
+      ? rotation
+      : ([rotation[0] - 0.4, rotation[1], rotation[2]] as [number, number, number]),
+    scl: dealt ? targetScale : 0.12,
+    config: { mass: 0.65, tension: 190, friction: 22 },
+    onChange: () => invalidate(),
   });
 
   return (
     <a.mesh
-      geometry={CARD_GEO}
-      material={material}
-      position={spring.position as any}
-      rotation={spring.rotation as any}
-      scale={spring.scale as any}
+      geometry={CARD_BOX}
+      material={materials}
+      position={spring.pos as any}
+      rotation={spring.rot as any}
+      scale={spring.scl as any}
     />
   );
 }

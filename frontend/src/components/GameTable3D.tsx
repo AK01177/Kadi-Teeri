@@ -1,269 +1,352 @@
-import { Suspense, useMemo, useCallback, useEffect } from "react";
+import { Suspense, useMemo, useCallback } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { PerspectiveCamera, Html } from "@react-three/drei";
-import type { GameState } from "../types/game";
-import { SUIT_SYMBOLS } from "../types/game";
+import * as THREE from "three";
+import type { GameState, Card as CardType } from "../types/game";
+import { SUIT_SYMBOLS, SUIT_NAMES } from "../types/game";
 import { Card3D } from "./Card3D";
+import { Card } from "./Card";
 
-function CameraAdjuster() {
-  const { camera, size } = useThree();
-  useEffect(() => {
-    // If mobile (portrait), pull camera back and increase FOV to see everything
-    if (size.width < size.height) {
-      (camera as any).fov = 75;
-      (camera as any).position.set(0, 8.5, 5.0);
-    } else {
-      (camera as any).fov = 50;
-      (camera as any).position.set(0, 5.5, 3.5);
-    }
-    camera.updateProjectionMatrix();
-  }, [camera, size]);
-  return null;
-}
+/* ──────────────────────────────────────────────────────────────
+   GameTable3D — Fullscreen first-person 3D card table
+   ────────────────────────────────────────────────────────────── */
 
 interface GameTable3DProps {
   game: GameState;
   mySeat: number;
   showTrick?: boolean;
+  hand: CardType[];
+  legalCards: CardType[];
+  isMyTurn: boolean;
+  onPlayCard: (card: CardType) => void;
+  trickWinner: { name: string; points: number } | null;
+  onClose: () => void;
 }
 
-/* ── Invalidation helper: any child can call this to trigger a frame ── */
+/* ── Helper: trigger a frame in demand mode ── */
 function InvalidateOnMount() {
   const invalidate = useThree((s) => s.invalidate);
   invalidate();
   return null;
 }
 
-export function GameTable3D({ game, mySeat, showTrick }: GameTable3DProps) {
+export function GameTable3D({
+  game,
+  mySeat,
+  showTrick,
+  hand,
+  legalCards,
+  isMyTurn,
+  onPlayCard,
+  trickWinner,
+  onClose,
+}: GameTable3DProps) {
   const n = game.players.length;
 
-  /* ── Compute opponent positions around the far side of the table ── */
+  /* ═══════════════════════════════════════════
+     Opponent positions — 180° arc on far side
+     ═══════════════════════════════════════════ */
   const otherPlayers = useMemo(() => {
-    const arr: { seatIndex: number; player: typeof game.players[0]; px: number; pz: number }[] = [];
+    const arr: {
+      seatIndex: number;
+      player: (typeof game.players)[0];
+      px: number;
+      pz: number;
+    }[] = [];
+    const numOthers = n - 1;
+
     for (let i = 1; i < n; i++) {
       const seatIndex = (mySeat + i) % n;
-      const numOthers = n - 1;
-
-      // Spread opponents in a 180° arc across the far side of the table
       let angle: number;
       if (numOthers === 1) {
         angle = Math.PI / 2; // directly across
       } else {
-        angle = (Math.PI * 0.15) + (i - 1) * (Math.PI * 0.7) / (numOthers - 1);
+        const startA = 0.82 * Math.PI;
+        const endA = 0.18 * Math.PI;
+        angle = startA + ((i - 1) / (numOthers - 1)) * (endA - startA);
       }
-
       const radius = 3.2;
       const px = Math.cos(angle) * radius;
-      const pz = -Math.sin(angle) * radius;
-
+      const pz = -Math.sin(angle) * radius - 0.5; // offset by table center
       arr.push({ seatIndex, player: game.players[seatIndex], px, pz });
     }
     return arr;
   }, [game.players, mySeat, n]);
 
+  /* ═══════════════════════════════════════════
+     Trick card layout — spread in the centre
+     ═══════════════════════════════════════════ */
   const cardsPlayed = game.trick?.cards_played || [];
 
-  /* ── Compute trick card positions — spread them clearly ── */
   const trickLayout = useMemo(() => {
     const count = cardsPlayed.length;
     if (count === 0) return [];
 
-    // Lay cards in a neat row for 1-4 cards, or a slight arc for more
-    const spacing = 1.8;
+    const spacing = 1.35;
     const totalWidth = (count - 1) * spacing;
     const startX = -totalWidth / 2;
 
-    return cardsPlayed.map((play, i) => {
-      const x = startX + i * spacing;
-      const z = 0.5; // center of table, slightly closer
-      const y = 0.01 + i * 0.005; // tiny stack offset to prevent z-fighting
-      // Slight random rotation for realism
-      const rotZ = (play.seat * 0.3) - 0.45;
-      return {
-        play,
-        position: [x, y, z] as [number, number, number],
-        rotation: [-Math.PI / 2, 0, rotZ] as [number, number, number],
-      };
-    });
+    return cardsPlayed.map((play, i) => ({
+      play,
+      position: [
+        startX + i * spacing,
+        0.02 + i * 0.004,
+        -0.5 + (i - (count - 1) / 2) * 0.12,
+      ] as [number, number, number],
+      rotation: [
+        -Math.PI / 2 + 0.15, // tilted slightly toward camera
+        0,
+        (i - (count - 1) / 2) * 0.06, // slight fan
+      ] as [number, number, number],
+    }));
   }, [cardsPlayed]);
 
-  const seatLabel = useCallback((s: number) => {
-    return game.players[s]?.name || `Seat ${s}`;
-  }, [game.players]);
+  /* ═══════════════════════════════════════════
+     Legal card set for hand rendering
+     ═══════════════════════════════════════════ */
+  const legalSet = useMemo(
+    () =>
+      new Set(
+        (legalCards || []).map(
+          (c) => `${c.rank}:${c.suit}:${c.deck_index}`
+        )
+      ),
+    [legalCards]
+  );
 
+  /* ═══════════════════════════════════════════
+     Helpers
+     ═══════════════════════════════════════════ */
+  const seatLabel = useCallback(
+    (s: number) => game.players[s]?.name || `Seat ${s}`,
+    [game.players]
+  );
+
+  /* ── Bheru info ── */
+  const mySecretBherus = useMemo(
+    () =>
+      game.bherus.filter((b) => {
+        if (b.revealed) return false;
+        return hand.some(
+          (c) => c.rank === b.call.rank && c.suit === b.call.suit
+        );
+      }),
+    [game.bherus, hand]
+  );
+  const amIBheru = !game.is_solo && mySecretBherus.length > 0;
+
+  const revealedBherus = useMemo(
+    () =>
+      game.bherus.filter(
+        (b) => b.revealed && b.holder_seat !== undefined
+      ),
+    [game.bherus]
+  );
+
+  /* ── My stats ── */
+  const myCardCount = game.hand_sizes?.[mySeat] ?? hand.length;
+  const myPoints = game.captured_points?.[mySeat] ?? 0;
+
+  /* ═══════════════════════════════════════════════════════════════
+     RENDER
+     ═══════════════════════════════════════════════════════════════ */
   return (
-    <div style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      width: "100vw",
-      height: "100vh",
-      zIndex: -1,
-      background: "linear-gradient(180deg, #0a1510 0%, #0e1912 100%)",
-    }}>
+    <div className="game3d-fullscreen">
+      {/* ════════════════════════ 3D CANVAS ════════════════════════ */}
       <Canvas
+        flat
         frameloop="demand"
         dpr={[1, 1.5]}
-        gl={{ antialias: true, powerPreference: "low-power" }}
+        gl={{ antialias: true, powerPreference: "default" }}
+        style={{ position: "absolute", inset: 0 }}
       >
-        {/* First-person seated view: looking down at the table */}
-        <PerspectiveCamera makeDefault position={[0, 5.5, 3.5]} fov={50} />
-        <CameraAdjuster />
-
-        {/* Simple flat lighting — no expensive PBR shadows */}
-        <ambientLight intensity={0.9} />
-        <directionalLight position={[0, 8, 2]} intensity={0.6} />
-
+        {/*
+          Camera: first-person seated view
+          Position [0, 5, 4.5] — elevated above our seat
+          Rotation [-PI/4, 0, 0] — looking 45° down at the table centre
+          FOV 55 — wide enough to see the full table in landscape
+        */}
+        <PerspectiveCamera
+          makeDefault
+          position={[0, 5, 4.5]}
+          rotation={[-Math.PI / 4, 0, 0]}
+          fov={55}
+        />
         <InvalidateOnMount />
 
-        {/* ── The Table ── */}
+        {/* ── Lighting: bright for vivid cards, no shadows ── */}
+        <ambientLight intensity={1.4} />
+        <directionalLight position={[3, 8, 5]} intensity={0.7} />
+        <directionalLight position={[-3, 6, -3]} intensity={0.3} />
+
+        {/* ═════════════ TABLE ═════════════ */}
+
         {/* Felt surface */}
-        <mesh receiveShadow position={[0, -0.15, -0.5]} rotation={[0, 0, 0]}>
-          <cylinderGeometry args={[4.5, 4.5, 0.15, 32]} />
-          <meshBasicMaterial color="#1a5c3a" />
-        </mesh>
-        {/* Wooden rim */}
-        <mesh position={[0, -0.15, -0.5]}>
-          <cylinderGeometry args={[4.7, 4.7, 0.2, 32]} />
-          <meshBasicMaterial color="#4a2812" />
-        </mesh>
-        {/* Inner felt detail ring */}
-        <mesh position={[0, -0.06, -0.5]}>
-          <ringGeometry args={[3.8, 4.5, 32]} />
-          <meshBasicMaterial color="#155230" side={2} />
+        <mesh position={[0, -0.08, -0.5]}>
+          <cylinderGeometry args={[4.5, 4.5, 0.16, 48]} />
+          <meshLambertMaterial color="#1a6b42" />
         </mesh>
 
+        {/* Wooden rim */}
+        <mesh position={[0, -0.12, -0.5]}>
+          <cylinderGeometry args={[4.8, 4.8, 0.24, 48]} />
+          <meshLambertMaterial color="#5a2d0c" />
+        </mesh>
+
+        {/* Inner decorative ring */}
+        <mesh
+          position={[0, 0.005, -0.5]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <ringGeometry args={[3.5, 3.9, 48]} />
+          <meshBasicMaterial color="#14573a" side={THREE.DoubleSide} />
+        </mesh>
+
+        {/* Centre circle */}
+        <mesh
+          position={[0, 0.006, -0.5]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <circleGeometry args={[0.6, 32]} />
+          <meshBasicMaterial color="#166340" side={THREE.DoubleSide} />
+        </mesh>
+
+        {/* Outer glow ring on the felt edge */}
+        <mesh
+          position={[0, 0.004, -0.5]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <ringGeometry args={[4.2, 4.45, 48]} />
+          <meshBasicMaterial
+            color="#0f4a2e"
+            side={THREE.DoubleSide}
+            transparent
+            opacity={0.6}
+          />
+        </mesh>
+
+        {/* ═════════════ TRICK CARDS ═════════════ */}
         <Suspense fallback={null}>
-          {/* ── Trick Cards — large, clearly visible ── */}
-          {showTrick && trickLayout.map(({ play, position, rotation }, i) => (
-            <group key={`trick-${play.card.suit}-${play.card.rank}-${play.seat}`} position={position} rotation={rotation} scale={1.5}>
-              <Card3D
-                card={play.card}
-                position={[0,0,0]}
-                rotation={[0,0,0]}
-                index={i}
-              />
-              {/* Label showing WHO played this card */}
-              <Html
-                position={[0, 0.05, 0.9]}
-                center
-                sprite
-                style={{ pointerEvents: "none" }}
+          {showTrick &&
+            trickLayout.map(({ play, position, rotation }, i) => (
+              <group
+                key={`trick-${play.card.suit}-${play.card.rank}-${play.seat}-${i}`}
               >
-                <div style={{
-                  background: "rgba(0,0,0,0.8)",
-                  color: "#fff",
-                  padding: "2px 8px",
-                  borderRadius: "6px",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  fontFamily: "var(--font-mono, monospace)",
-                  whiteSpace: "nowrap",
-                  border: game.turn_seat === play.seat ? "1px solid var(--amber, #f0a500)" : "1px solid rgba(255,255,255,0.15)",
-                }}>
-                  {seatLabel(play.seat)} — {play.card.rank}{SUIT_SYMBOLS[play.card.suit]}
-                </div>
-              </Html>
-            </group>
-          ))}
+                <Card3D
+                  card={play.card}
+                  position={position}
+                  rotation={rotation}
+                  index={i}
+                  scale={1.15}
+                />
+                {/* Player name label below the card */}
+                <Html
+                  position={[
+                    position[0],
+                    0.06,
+                    position[2] + 0.95,
+                  ]}
+                  center
+                  sprite
+                  style={{ pointerEvents: "none" }}
+                >
+                  <div className="game3d-card-label">
+                    {seatLabel(play.seat)} —{" "}
+                    {play.card.rank}
+                    {SUIT_SYMBOLS[play.card.suit]}
+                  </div>
+                </Html>
+              </group>
+            ))}
         </Suspense>
 
-        {/* ── Opponent Seats ── */}
+        {/* ═════════════ OPPONENT SEATS ═════════════ */}
         {otherPlayers.map((p) => (
           <group key={p.seatIndex}>
-            {/* Small indicator for opponent's cards (face-down stack) */}
-            {game.status === "playing" && (game.hand_sizes?.[p.seatIndex] ?? 0) > 0 && (
-              <mesh position={[p.px, 0.01, p.pz - 0.2]} rotation={[-Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[0.5, 0.7]} />
-                <meshBasicMaterial color="#2a3a30" />
+            {/* Face-down card indicator */}
+            {game.status === "playing" &&
+              (game.hand_sizes?.[p.seatIndex] ?? 0) > 0 && (
+                <Suspense fallback={null}>
+                  <Card3D
+                    card={{ rank: "A", suit: "S", deck_index: -1 }}
+                    position={[p.px, 0.01, p.pz + 0.3]}
+                    rotation={[
+                      -Math.PI / 2,
+                      0,
+                      p.seatIndex * 0.4 - 0.6,
+                    ]}
+                    index={0}
+                    faceDown
+                    scale={0.55}
+                  />
+                </Suspense>
+              )}
+
+            {/* Active turn glow ring */}
+            {game.turn_seat === p.seatIndex && (
+              <mesh
+                position={[p.px, 0.008, p.pz + 0.3]}
+                rotation={[-Math.PI / 2, 0, 0]}
+              >
+                <ringGeometry args={[0.55, 0.7, 32]} />
+                <meshBasicMaterial
+                  color="#f0a500"
+                  transparent
+                  opacity={0.5}
+                  side={THREE.DoubleSide}
+                />
               </mesh>
             )}
 
             {/* Opponent info overlay */}
             <Html
-              position={[p.px, 0.5, p.pz - 0.8]}
+              position={[p.px, 0.6, p.pz - 0.5]}
               center
               sprite
               style={{ pointerEvents: "none" }}
             >
-              <div style={{
-                background: "rgba(8, 12, 10, 0.95)",
-                backdropFilter: "blur(10px)",
-                borderRadius: "10px",
-                padding: "8px 14px",
-                border: game.turn_seat === p.seatIndex
-                  ? "2px solid var(--amber, #f0a500)"
-                  : "1px solid rgba(255,255,255,0.1)",
-                textAlign: "center",
-                minWidth: "80px",
-                boxShadow: game.turn_seat === p.seatIndex
-                  ? "0 0 12px rgba(240,165,0,0.3)"
-                  : "0 2px 8px rgba(0,0,0,0.4)",
-              }}>
-                {/* Name */}
-                <div style={{
-                  color: "#fff",
-                  fontSize: "13px",
-                  fontWeight: 700,
-                  marginBottom: "4px",
-                  letterSpacing: "0.02em",
-                }}>
+              <div
+                className={`game3d-opponent${
+                  game.turn_seat === p.seatIndex ? " active" : ""
+                }`}
+              >
+                <div className="game3d-opponent-name">
                   {p.player?.name || "Empty"}
                 </div>
 
-                {/* Tags */}
-                <div style={{ display: "flex", gap: "4px", justifyContent: "center", flexWrap: "wrap", marginBottom: "4px" }}>
+                <div className="game3d-opponent-tags">
                   {game.dealer === p.seatIndex && (
-                    <span style={{
-                      background: "rgba(240,165,0,0.2)",
-                      color: "#f0a500",
-                      padding: "1px 6px",
-                      borderRadius: "4px",
-                      fontSize: "9px",
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                    }}>Dealer</span>
+                    <span className="game3d-tag dealer">Dealer</span>
                   )}
                   {game.bidder_seat === p.seatIndex && (
-                    <span style={{
-                      background: "rgba(56,189,248,0.2)",
-                      color: "#38bdf8",
-                      padding: "1px 6px",
-                      borderRadius: "4px",
-                      fontSize: "9px",
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                    }}>Bidder</span>
+                    <span className="game3d-tag bidder">Bidder</span>
                   )}
-                  {game.bherus.filter((b) => b.revealed && b.holder_seat === p.seatIndex).map((_, bi) => (
-                    <span key={bi} style={{
-                      background: "rgba(168,85,247,0.2)",
-                      color: "#a855f7",
-                      padding: "1px 6px",
-                      borderRadius: "4px",
-                      fontSize: "9px",
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                    }}>Bheru</span>
-                  ))}
+                  {game.bherus
+                    .filter(
+                      (b) =>
+                        b.revealed &&
+                        b.holder_seat === p.seatIndex
+                    )
+                    .map((_, bi) => (
+                      <span key={bi} className="game3d-tag bheru">
+                        Bheru
+                      </span>
+                    ))}
+                  {!p.player?.is_connected && (
+                    <span className="game3d-tag offline">
+                      Offline
+                    </span>
+                  )}
                 </div>
 
-                {/* Stats */}
                 {game.status === "playing" && (
-                  <div style={{
-                    display: "flex",
-                    gap: "10px",
-                    justifyContent: "center",
-                    fontSize: "11px",
-                    fontFamily: "var(--font-mono, monospace)",
-                    fontWeight: 600,
-                  }}>
-                    <span style={{ color: "rgba(255,255,255,0.6)" }}>
-                      {game.hand_sizes?.[p.seatIndex] ?? 0}🃏
+                  <div className="game3d-opponent-stats">
+                    <span>
+                      {game.hand_sizes?.[p.seatIndex] ?? 0} 🃏
                     </span>
-                    <span style={{ color: "#f0a500" }}>
-                      {game.captured_points?.[p.seatIndex] ?? 0} pts
+                    <span className="game3d-pts">
+                      {game.captured_points?.[p.seatIndex] ?? 0}{" "}
+                      pts
                     </span>
                   </div>
                 )}
@@ -272,22 +355,129 @@ export function GameTable3D({ game, mySeat, showTrick }: GameTable3DProps) {
           </group>
         ))}
 
-        {/* ── "Your view" indicator at the near edge ── */}
-        <Html position={[0, 0.1, 3.8]} center sprite style={{ pointerEvents: "none" }}>
-          <div style={{
-            background: "rgba(8,12,10,0.9)",
-            color: "rgba(255,255,255,0.5)",
-            padding: "4px 16px",
-            borderRadius: "8px",
-            fontSize: "11px",
-            fontWeight: 600,
-            fontFamily: "var(--font-mono, monospace)",
-            border: "1px solid rgba(255,255,255,0.08)",
-          }}>
-            Your seat
+        {/* ═════════════ YOUR SEAT LABEL ═════════════ */}
+        <Html
+          position={[0, 0.1, 3.2]}
+          center
+          sprite
+          style={{ pointerEvents: "none" }}
+        >
+          <div className="game3d-you-label">
+            {game.players[mySeat]?.name || "You"} · {myCardCount}{" "}
+            🃏 · {myPoints} pts
           </div>
         </Html>
       </Canvas>
+
+      {/* ════════════════════════ HUD OVERLAY ════════════════════════ */}
+      <div className="game3d-hud">
+        <div className="game3d-hud-left">
+          {game.trump_suit && (
+            <span className="game3d-badge trump">
+              Trump {SUIT_SYMBOLS[game.trump_suit]}
+            </span>
+          )}
+          <span className="game3d-badge target">
+            Target {game.bid_target}
+          </span>
+          <span className="game3d-badge">
+            Trick {game.trick_number}/
+            {game.hand_sizes
+              ? Math.max(...Object.values(game.hand_sizes)) +
+                game.trick_number -
+                1
+              : "?"}
+          </span>
+          {!game.is_solo && game.bherus.length > 0 && (
+            <span className="game3d-badge calls">
+              Calls:{" "}
+              {game.bherus
+                .map(
+                  (b) =>
+                    `${b.call.rank}${SUIT_SYMBOLS[b.call.suit]}`
+                )
+                .join(", ")}
+            </span>
+          )}
+        </div>
+        <button
+          className="game3d-close-btn"
+          onClick={onClose}
+          title="Exit 3D View"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* ════════════════════════ INFO BANNERS ════════════════════════ */}
+      <div className="game3d-banners">
+        {game.is_solo && game.bidder_seat === mySeat && (
+          <div className="game3d-info-banner">
+            Playing solo against the table
+          </div>
+        )}
+        {amIBheru && (
+          <div className="game3d-info-banner">
+            {mySecretBherus.some((b) => b.call.mode !== "second")
+              ? "You are the secret partner!"
+              : "You can be the secret partner if you play it second!"}
+          </div>
+        )}
+        {revealedBherus.length > 0 && !game.is_solo && (
+          <div className="game3d-info-banner">
+            Partner revealed:{" "}
+            {revealedBherus
+              .map((b) => seatLabel(b.holder_seat!))
+              .join(", ")}
+          </div>
+        )}
+      </div>
+
+      {/* ════════════════════════ TURN INDICATOR ════════════════════════ */}
+      <div className={`game3d-turn${isMyTurn ? " mine" : ""}`}>
+        {isMyTurn ? (
+          <>
+            Your turn
+            {game.trick?.lead_suit
+              ? ` — follow ${SUIT_NAMES[game.trick.lead_suit]}`
+              : ""}
+          </>
+        ) : (
+          <>Waiting on {seatLabel(game.turn_seat!)}…</>
+        )}
+      </div>
+
+      {/* ════════════════════════ HAND STRIP ════════════════════════ */}
+      <div className="game3d-hand">
+        <div className="game3d-hand-scroll">
+          {hand.map((card, i) => {
+            const key = `${card.rank}-${card.suit}-${card.deck_index}-${i}`;
+            const isLegal =
+              isMyTurn &&
+              legalSet.has(
+                `${card.rank}:${card.suit}:${card.deck_index}`
+              );
+            return (
+              <Card
+                key={key}
+                card={card}
+                disabled={!isLegal}
+                onClick={
+                  isLegal ? () => onPlayCard(card) : undefined
+                }
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ════════════════════════ TRICK WINNER ════════════════════════ */}
+      {trickWinner && (
+        <div className="game3d-trick-winner">
+          <h2>{trickWinner.name} gets the trick!</h2>
+          <p>+{trickWinner.points} points</p>
+        </div>
+      )}
     </div>
   );
 }

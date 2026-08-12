@@ -1,9 +1,6 @@
 import { PlayerSeat } from "./PlayerSeat";
 import { TrickArea } from "./TrickArea";
 import type { GameState } from "../types/game";
-import { useGameStore } from "../store/gameStore";
-import { GameTable3D } from "./GameTable3D";
-
 interface GameTableProps {
   game: GameState;
   mySeat: number;
@@ -11,12 +8,6 @@ interface GameTableProps {
 }
 
 export function GameTable({ game, mySeat, showTrick }: GameTableProps) {
-  const is3DView = useGameStore((s) => s.is3DView);
-
-  if (is3DView) {
-    return <GameTable3D game={game} mySeat={mySeat} showTrick={showTrick} />;
-  }
-
   const n = game.players.length;
 
   // We want to render all players in a circle.
@@ -24,7 +15,7 @@ export function GameTable({ game, mySeat, showTrick }: GameTableProps) {
   for (let i = 0; i < n; i++) {
     const seatIndex = (mySeat + i) % n;
     const angle = (Math.PI / 2) + (i * 2 * Math.PI) / n;
-    const radius = 42; 
+    const radius = 42;
     const x = 50 + radius * Math.cos(angle);
     const y = 50 + radius * Math.sin(angle);
 
@@ -39,7 +30,7 @@ export function GameTable({ game, mySeat, showTrick }: GameTableProps) {
   return (
     <div className="round-table">
       {seats.map(({ seatIndex, player, x, y }) => (
-        <div 
+        <div
           key={seatIndex}
           className="seat-wrapper"
           style={{

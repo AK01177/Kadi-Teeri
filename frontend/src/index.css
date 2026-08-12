@@ -715,22 +715,18 @@ h3 {
 
 .hand-row {
   display: flex;
-  justify-content: center;
-  padding: 6px 0 12px 0;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 6px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scroll-padding: 0 10px;
 }
 
-.hand-row .card {
-  margin-left: -20px; /* negative margin for overlap */
-  transition: transform 0.15s ease, margin 0.15s ease;
-}
-
-.hand-row .card:first-child {
-  margin-left: 0;
-}
-
-.hand-row .card:hover:not(:disabled):not(.disabled) {
-  transform: translateY(-12px);
-  z-index: 10;
+.hand-row > * {
+  scroll-snap-align: center;
 }
 
 .hand-wrap {
@@ -1108,4 +1104,319 @@ details.log-details summary {
   .trick-winner-overlay {
     max-width: 400px;
   }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   GameTable3D Fullscreen Styles
+   ────────────────────────────────────────────────────────────── */
+
+/* Container: forces full width/height in mobile landscape */
+.game3d-fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background-color: #000;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* HUD Top Overlay */
+.game3d-hud {
+  position: absolute;
+  top: env(safe-area-inset-top, 16px);
+  left: env(safe-area-inset-left, 16px);
+  right: env(safe-area-inset-right, 16px);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.game3d-hud-left {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  max-width: 80%;
+  pointer-events: auto;
+}
+
+.game3d-badge {
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.game3d-badge.trump {
+  background: rgba(255, 75, 75, 0.8);
+  border-color: rgba(255, 100, 100, 0.5);
+}
+
+.game3d-badge.target {
+  background: rgba(75, 150, 255, 0.8);
+  border-color: rgba(100, 180, 255, 0.5);
+}
+
+.game3d-badge.calls {
+  background: rgba(63, 185, 166, 0.8);
+  border-color: var(--teal);
+}
+
+.game3d-close-btn {
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  backdrop-filter: blur(4px);
+}
+
+.game3d-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+/* Info Banners (Solo, Bheru) */
+.game3d-banners {
+  position: absolute;
+  top: 60px;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.game3d-info-banner {
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.8), transparent);
+  color: #fff;
+  padding: 6px 24px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+}
+
+/* Turn Indicator */
+.game3d-turn {
+  position: absolute;
+  top: 55%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: #ccc;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  pointer-events: none;
+  z-index: 998;
+  backdrop-filter: blur(2px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.game3d-turn.mine {
+  background: rgba(0, 150, 60, 0.85);
+  color: #fff;
+  border-color: rgba(0, 255, 100, 0.4);
+  font-weight: 600;
+  font-size: 16px;
+  box-shadow: 0 0 15px rgba(0, 255, 100, 0.3);
+  animation: game3d-pulse 2s infinite;
+}
+
+@keyframes game3d-pulse {
+  0% { box-shadow: 0 0 10px rgba(0, 255, 100, 0.3); }
+  50% { box-shadow: 0 0 25px rgba(0, 255, 100, 0.6); }
+  100% { box-shadow: 0 0 10px rgba(0, 255, 100, 0.3); }
+}
+
+/* Horizontal Scroll Hand Strip */
+.game3d-hand {
+  position: absolute;
+  bottom: env(safe-area-inset-bottom, 10px);
+  left: 0;
+  right: 0;
+  padding: 10px 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
+  pointer-events: auto;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+}
+
+.game3d-hand-scroll {
+  display: flex;
+  gap: 12px;
+  padding: 10px 20px;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+  max-width: 100%;
+}
+
+.game3d-hand-scroll::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+/* Make sure the 2D cards look vivid inside the scroll area */
+.game3d-hand-scroll .card-button {
+  flex-shrink: 0;
+  width: clamp(70px, 12vh, 100px);
+  height: clamp(100px, 17vh, 140px);
+  transform-origin: bottom center;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.game3d-hand-scroll .card-button:hover:not(:disabled) {
+  transform: translateY(-20px) scale(1.1);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.7);
+  z-index: 10;
+}
+
+.game3d-hand-scroll .card-button:disabled {
+  opacity: 0.5;
+  filter: grayscale(0.5);
+  transform: translateY(10px);
+}
+
+/* Trick Winner Overlay */
+.game3d-trick-winner {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  pointer-events: none;
+  animation: game3d-fade-in 0.3s ease-out forwards;
+}
+
+.game3d-trick-winner h2 {
+  color: #fff;
+  font-size: 32px;
+  margin: 0 0 10px 0;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+.game3d-trick-winner p {
+  color: #4ade80;
+  font-size: 24px;
+  font-weight: bold;
+  margin: 0;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+@keyframes game3d-fade-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* HTML Overlays in 3D Scene */
+.game3d-opponent {
+  background: rgba(15, 20, 25, 0.85);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: white;
+  min-width: 120px;
+  text-align: center;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  transition: all 0.3s;
+}
+
+.game3d-opponent.active {
+  border-color: rgba(240, 165, 0, 0.8);
+  box-shadow: 0 0 15px rgba(240, 165, 0, 0.4);
+  transform: scale(1.05);
+}
+
+.game3d-opponent-name {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.game3d-opponent-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.game3d-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.game3d-tag.dealer { background: #3b82f6; }
+.game3d-tag.bidder { background: #ef4444; }
+.game3d-tag.bheru { background: #10b981; }
+.game3d-tag.offline { background: #6b7280; }
+
+.game3d-opponent-stats {
+  display: flex;
+  justify-content: space-around;
+  font-size: 13px;
+  color: #ccc;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: 4px;
+}
+
+.game3d-pts {
+  color: #4ade80;
+}
+
+.game3d-you-label {
+  background: rgba(0, 0, 0, 0.6);
+  padding: 6px 16px;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.game3d-card-label {
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+  border: 1px solid rgba(255,255,255,0.2);
 }

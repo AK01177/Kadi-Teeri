@@ -2,11 +2,12 @@ import { useGameStore } from "../store/gameStore";
 import { SUIT_SYMBOLS, SUIT_NAMES } from "../types/game";
 import type { Card as CardType } from "../types/game";
 import { GameTable } from "../components/GameTable";
+import { GameTable3D } from "../components/GameTable3D";
 import { Hand } from "../components/Hand";
 import { ActivityLog } from "../components/ActivityLog";
 
 export function PlayingPage() {
-  const { gameState, hand, seat, sendFn, trickWinner, is3DView } = useGameStore();
+  const { gameState, hand, seat, sendFn, trickWinner, is3DView, setIs3DView } = useGameStore();
 
   if (!gameState || seat === null) return null;
 
@@ -44,6 +45,22 @@ export function PlayingPage() {
   };
 
   const revealedBherus = game.bherus.filter((b) => b.revealed && b.holder_seat !== undefined);
+
+  if (is3DView) {
+    return (
+      <GameTable3D
+        game={game}
+        mySeat={seat}
+        showTrick
+        hand={hand}
+        legalCards={legalCards}
+        isMyTurn={myTurn}
+        onPlayCard={handlePlayCard}
+        trickWinner={trickWinner}
+        onClose={() => setIs3DView(false)}
+      />
+    );
+  }
 
   return (
     <>
@@ -118,8 +135,6 @@ export function PlayingPage() {
         showTrick
       />
 
-      {/* Spacer for 3D View to push the hand to the bottom of the screen */}
-      {is3DView && <div style={{ flex: 1, minHeight: "45vh" }} />}
 
       <Hand
         cards={hand}
@@ -148,3 +163,4 @@ function getLegalPlays(
   const following = hand.filter((c) => c.suit === leadSuit);
   return following.length > 0 ? following : [...hand];
 }
+
