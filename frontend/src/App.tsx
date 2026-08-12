@@ -83,8 +83,8 @@ function App() {
   useEffect(() => {
     if (isConnected) {
       const state = useGameStore.getState();
-      // If we already have a playerId, it means we were in a session and just reconnected
-      if (state.playerId && state.roomId && send) {
+      // If we already have a playerId and gameState, it means we were in a session and just reconnected
+      if (state.playerId && state.roomId && state.gameState && send) {
         send({
           type: "rejoin",
           name: state.playerName || "Player",
