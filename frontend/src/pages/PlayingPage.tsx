@@ -6,7 +6,7 @@ import { Hand } from "../components/Hand";
 import { ActivityLog } from "../components/ActivityLog";
 
 export function PlayingPage() {
-  const { gameState, hand, seat, sendFn, trickWinner } = useGameStore();
+  const { gameState, hand, seat, sendFn, trickWinner, is3DView } = useGameStore();
 
   if (!gameState || seat === null) return null;
 
@@ -122,7 +122,8 @@ export function PlayingPage() {
         onPlayCard={handlePlayCard} 
       />
 
-      {/* Local Player visually integrated into GameTable above */}
+      {/* Spacer for 3D View to push the hand to the bottom of the screen */}
+      {is3DView && <div style={{ flex: 1, minHeight: "45vh" }} />}
 
       <Hand
         cards={hand}
@@ -136,7 +137,7 @@ export function PlayingPage() {
         }
       />
 
-      <div style={{ marginTop: "14px" }}>
+      <div style={{ marginTop: "auto" }}>
         <ActivityLog log={game.log} />
       </div>
     </>

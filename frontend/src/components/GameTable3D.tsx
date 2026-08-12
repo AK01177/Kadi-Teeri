@@ -1,9 +1,25 @@
-import { Suspense, useMemo, useCallback } from "react";
+import { Suspense, useMemo, useCallback, useEffect } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { PerspectiveCamera, Html } from "@react-three/drei";
 import type { GameState } from "../types/game";
 import { SUIT_SYMBOLS } from "../types/game";
 import { Card3D } from "./Card3D";
+
+function CameraAdjuster() {
+  const { camera, size } = useThree();
+  useEffect(() => {
+    // If mobile (portrait), pull camera back and increase FOV to see everything
+    if (size.width < size.height) {
+      (camera as any).fov = 75;
+      (camera as any).position.set(0, 8.5, 5.0);
+    } else {
+      (camera as any).fov = 50;
+      (camera as any).position.set(0, 5.5, 3.5);
+    }
+    camera.updateProjectionMatrix();
+  }, [camera, size]);
+  return null;
+}
 
 interface GameTable3DProps {
   game: GameState;
@@ -53,13 +69,13 @@ export function GameTable3D({ game, mySeat, showTrick }: GameTable3DProps) {
     if (count === 0) return [];
 
     // Lay cards in a neat row for 1-4 cards, or a slight arc for more
-    const spacing = 1.3;
+    const spacing = 1.8;
     const totalWidth = (count - 1) * spacing;
     const startX = -totalWidth / 2;
 
     return cardsPlayed.map((play, i) => {
       const x = startX + i * spacing;
-      const z = 0; // center of table
+      const z = 0.5; // center of table, slightly closer
       const y = 0.01 + i * 0.005; // tiny stack offset to prevent z-fighting
       // Slight random rotation for realism
       const rotZ = (play.seat * 0.3) - 0.45;
@@ -77,14 +93,12 @@ export function GameTable3D({ game, mySeat, showTrick }: GameTable3DProps) {
 
   return (
     <div style={{
-      width: "100%",
-      height: "45vh",
-      minHeight: "260px",
-      maxHeight: "400px",
-      borderRadius: "16px",
-      overflow: "hidden",
-      border: "1px solid var(--border)",
-      position: "relative",
+      position: "fixed",
+      top: 0,
+      left: 0,
+      width: "100vw",
+      height: "100vh",
+      zIndex: -1,
       background: "linear-gradient(180deg, #0a1510 0%, #0e1912 100%)",
     }}>
       <Canvas
@@ -94,6 +108,7 @@ export function GameTable3D({ game, mySeat, showTrick }: GameTable3DProps) {
       >
         {/* First-person seated view: looking down at the table */}
         <PerspectiveCamera makeDefault position={[0, 5.5, 3.5]} fov={50} />
+        <CameraAdjuster />
 
         {/* Simple flat lighting — no expensive PBR shadows */}
         <ambientLight intensity={0.9} />
@@ -121,16 +136,16 @@ export function GameTable3D({ game, mySeat, showTrick }: GameTable3DProps) {
         <Suspense fallback={null}>
           {/* ── Trick Cards — large, clearly visible ── */}
           {showTrick && trickLayout.map(({ play, position, rotation }, i) => (
-            <group key={`trick-${play.card.suit}-${play.card.rank}-${play.seat}`}>
+            <group key={`trick-${play.card.suit}-${play.card.rank}-${play.seat}`} position={position} rotation={rotation} scale={1.5}>
               <Card3D
                 card={play.card}
-                position={position}
-                rotation={rotation}
+                position={[0,0,0]}
+                rotation={[0,0,0]}
                 index={i}
               />
               {/* Label showing WHO played this card */}
               <Html
-                position={[position[0], 0.05, position[2] + 0.9]}
+                position={[0, 0.05, 0.9]}
                 center
                 sprite
                 style={{ pointerEvents: "none" }}

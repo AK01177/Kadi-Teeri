@@ -79,6 +79,7 @@ export function GameTable({ game, mySeat, showTrick, hand, legalCards, isMyTurn,
           <TrickArea
             cardsPlayed={game.trick.cards_played}
             numPlayers={n}
+            players={game.players}
           />
         ) : (
           <div className="trick-area">
