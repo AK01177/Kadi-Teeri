@@ -8,13 +8,9 @@ interface GameTableProps {
   game: GameState;
   mySeat: number;
   showTrick?: boolean;
-  hand?: CardType[];
-  legalCards?: CardType[];
-  isMyTurn?: boolean;
-  onPlayCard?: (card: CardType) => void;
 }
 
-export function GameTable({ game, mySeat, showTrick, hand, legalCards, isMyTurn, onPlayCard }: GameTableProps) {
+export function GameTable({ game, mySeat, showTrick }: GameTableProps) {
   const is3DView = useGameStore((s) => s.is3DView);
 
   if (is3DView) {

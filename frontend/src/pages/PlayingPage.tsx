@@ -116,10 +116,6 @@ export function PlayingPage() {
         game={game} 
         mySeat={seat} 
         showTrick 
-        hand={hand} 
-        legalCards={legalCards} 
-        isMyTurn={myTurn} 
-        onPlayCard={handlePlayCard} 
       />
 
       {/* Spacer for 3D View to push the hand to the bottom of the screen */}
