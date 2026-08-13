@@ -269,16 +269,24 @@ class RoomManager:
             return "Only the host can configure the room."
 
         if player_count is not None:
-            if player_count < 4 or player_count > 8:
-                return "Player count must be between 4 and 8."
+            if player_count < 4 or player_count > 12:
+                return "Player count must be between 4 and 12."
             if player_count < len(game.players):
                 return f"Cannot reduce below current player count ({len(game.players)})."
             game.config.player_count = player_count
             game.log.append(f"Player count set to {player_count}.")
 
+            # Auto-force 2 decks for 9+ players (1 deck gives too few cards)
+            if player_count >= 9 and game.config.deck_count < 2:
+                game.config.deck_count = 2
+                game.log.append("Deck count auto-set to 2 (required for 9+ players).")
+
         if deck_count is not None:
             if deck_count not in (1, 2):
                 return "Deck count must be 1 or 2."
+            # Don't allow 1 deck for 9+ players
+            if deck_count == 1 and game.config.player_count >= 9:
+                return "2 decks required for 9+ players."
             game.config.deck_count = deck_count
             game.log.append(f"Deck count set to {deck_count}.")
 

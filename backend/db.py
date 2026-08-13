@@ -1,6 +1,8 @@
 import os
 import logging
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
+# pyrefly: ignore [missing-import]
 from supabase import create_client, Client
 
 logger = logging.getLogger("kadi_teeri.db")

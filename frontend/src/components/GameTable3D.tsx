@@ -30,6 +30,109 @@ function InvalidateOnMount() {
   return null;
 }
 
+/* ── Procedural felt texture ── */
+function createFeltTexture(): THREE.CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+
+  // Base felt green
+  ctx.fillStyle = "#1a6b42";
+  ctx.fillRect(0, 0, size, size);
+
+  // Felt grain — many tiny dots with slight color variation
+  for (let i = 0; i < 40000; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const brightness = 20 + Math.random() * 30;
+    const green = 90 + Math.random() * 40;
+    ctx.fillStyle = `rgba(${brightness}, ${green}, ${brightness + 20}, ${0.08 + Math.random() * 0.12})`;
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  // Subtle fiber streaks
+  ctx.strokeStyle = "rgba(30, 120, 70, 0.06)";
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < 200; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const len = 10 + Math.random() * 40;
+    const angle = Math.random() * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len);
+    ctx.stroke();
+  }
+
+  // Vignette/wear at center
+  const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  grad.addColorStop(0, "rgba(25, 100, 60, 0.15)");
+  grad.addColorStop(0.6, "rgba(0, 0, 0, 0)");
+  grad.addColorStop(1, "rgba(0, 0, 0, 0.1)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(3, 3);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/* ── Procedural wood grain texture ── */
+function createWoodTexture(): THREE.CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+
+  // Base dark wood
+  ctx.fillStyle = "#5a2d0c";
+  ctx.fillRect(0, 0, size, size);
+
+  // Wood grain lines — horizontal streaks with color variation
+  for (let y = 0; y < size; y++) {
+    const wave = Math.sin(y * 0.04) * 8 + Math.sin(y * 0.11) * 4;
+    const brightness = 70 + Math.sin(y * 0.08 + wave * 0.1) * 25;
+    const r = brightness + 10;
+    const g = brightness * 0.5;
+    const b = brightness * 0.15;
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.15 + Math.random() * 0.1})`;
+    ctx.fillRect(0, y, size, 1);
+  }
+
+  // Knots — dark circles
+  for (let i = 0; i < 5; i++) {
+    const kx = Math.random() * size;
+    const ky = Math.random() * size;
+    const kr = 8 + Math.random() * 15;
+    const kGrad = ctx.createRadialGradient(kx, ky, 0, kx, ky, kr);
+    kGrad.addColorStop(0, "rgba(30, 12, 0, 0.5)");
+    kGrad.addColorStop(1, "rgba(30, 12, 0, 0)");
+    ctx.fillStyle = kGrad;
+    ctx.beginPath();
+    ctx.arc(kx, ky, kr, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Subtle noise for roughness
+  for (let i = 0; i < 15000; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    ctx.fillStyle = `rgba(0, 0, 0, ${Math.random() * 0.08})`;
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(4, 1);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 export function GameTable3D({
   game,
   mySeat,
@@ -42,6 +145,7 @@ export function GameTable3D({
   onClose,
 }: GameTable3DProps) {
   const n = game.players.length;
+  const isCompact = n >= 6;
 
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -67,8 +171,13 @@ export function GameTable3D({
     };
   }, []);
 
+  /* ── Procedural textures (created once) ── */
+  const feltTexture = useMemo(() => createFeltTexture(), []);
+  const woodTexture = useMemo(() => createWoodTexture(), []);
+
   /* ═══════════════════════════════════════════
      Opponent positions — 180° arc on far side
+     Dynamic radius and wider arc for many players
      ═══════════════════════════════════════════ */
   const otherPlayers = useMemo(() => {
     const arr: {
@@ -79,19 +188,24 @@ export function GameTable3D({
     }[] = [];
     const numOthers = n - 1;
 
+    // Dynamic radius: grows with player count to prevent overlap
+    const radius = n <= 4 ? 3.2 : 3.2 + (n - 4) * 0.35;
+    // Wider arc for more players
+    const startA = n <= 4 ? 0.82 * Math.PI : 0.92 * Math.PI;
+    const endA = n <= 4 ? 0.18 * Math.PI : 0.08 * Math.PI;
+
     for (let i = 1; i < n; i++) {
       const seatIndex = (mySeat + i) % n;
       let angle: number;
       if (numOthers === 1) {
         angle = Math.PI / 2; // directly across
       } else {
-        const startA = 0.82 * Math.PI;
-        const endA = 0.18 * Math.PI;
         angle = startA + ((i - 1) / (numOthers - 1)) * (endA - startA);
       }
-      const radius = 3.2;
       const px = Math.cos(angle) * radius;
-      const pz = -Math.sin(angle) * radius - 0.5; // offset by table center
+      // Stagger Z slightly per opponent so overlays don't align
+      const zStagger = numOthers > 4 ? (i % 2 === 0 ? 0.25 : -0.25) : 0;
+      const pz = -Math.sin(angle) * radius - 0.5 + zStagger;
       arr.push({ seatIndex, player: game.players[seatIndex], px, pz });
     }
     return arr;
@@ -106,7 +220,8 @@ export function GameTable3D({
     const count = cardsPlayed.length;
     if (count === 0) return [];
 
-    const spacing = 1.35;
+    // Tighter spacing for many cards
+    const spacing = count > 5 ? 0.95 : 1.35;
     const totalWidth = (count - 1) * spacing;
     const startX = -totalWidth / 2;
 
@@ -215,16 +330,36 @@ export function GameTable3D({
 
         {/* ═════════════ TABLE ═════════════ */}
 
-        {/* Felt surface */}
+        {/* Felt surface — with procedural texture */}
         <mesh receiveShadow position={[0, -0.08, -0.5]}>
-          <cylinderGeometry args={[4.5, 4.5, 0.16, 48]} />
-          <meshStandardMaterial color="#1a6b42" roughness={0.85} />
+          <cylinderGeometry args={[4.5, 4.5, 0.16, 64]} />
+          <meshStandardMaterial
+            map={feltTexture}
+            color="#1a6b42"
+            roughness={0.85}
+          />
         </mesh>
 
-        {/* Wooden rim */}
+        {/* Wooden rim — with procedural wood grain */}
         <mesh receiveShadow position={[0, -0.12, -0.5]}>
-          <cylinderGeometry args={[4.8, 4.8, 0.24, 48]} />
-          <meshStandardMaterial color="#5a2d0c" roughness={0.6} />
+          <cylinderGeometry args={[4.8, 4.8, 0.24, 64]} />
+          <meshStandardMaterial
+            map={woodTexture}
+            color="#5a2d0c"
+            roughness={0.55}
+            metalness={0.05}
+          />
+        </mesh>
+
+        {/* Rim highlight — top edge bevel */}
+        <mesh position={[0, 0.01, -0.5]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[4.45, 4.55, 64]} />
+          <meshStandardMaterial
+            color="#7a4420"
+            roughness={0.4}
+            metalness={0.1}
+            side={THREE.DoubleSide}
+          />
         </mesh>
 
         {/* Inner decorative ring */}
@@ -232,8 +367,12 @@ export function GameTable3D({
           position={[0, 0.005, -0.5]}
           rotation={[-Math.PI / 2, 0, 0]}
         >
-          <ringGeometry args={[3.5, 3.9, 48]} />
-          <meshBasicMaterial color="#14573a" side={THREE.DoubleSide} />
+          <ringGeometry args={[3.5, 3.9, 64]} />
+          <meshStandardMaterial
+            color="#14573a"
+            roughness={0.9}
+            side={THREE.DoubleSide}
+          />
         </mesh>
 
         {/* Centre circle */}
@@ -242,20 +381,38 @@ export function GameTable3D({
           rotation={[-Math.PI / 2, 0, 0]}
         >
           <circleGeometry args={[0.6, 32]} />
-          <meshBasicMaterial color="#166340" side={THREE.DoubleSide} />
+          <meshStandardMaterial
+            color="#166340"
+            roughness={0.8}
+            side={THREE.DoubleSide}
+          />
         </mesh>
 
-        {/* Outer glow ring on the felt edge */}
+        {/* Outer glow ring on the felt edge — dark vignette */}
         <mesh
           position={[0, 0.004, -0.5]}
           rotation={[-Math.PI / 2, 0, 0]}
         >
-          <ringGeometry args={[4.2, 4.45, 48]} />
+          <ringGeometry args={[4.0, 4.48, 64]} />
           <meshBasicMaterial
-            color="#0f4a2e"
+            color="#0a2e1e"
             side={THREE.DoubleSide}
             transparent
-            opacity={0.6}
+            opacity={0.35}
+          />
+        </mesh>
+
+        {/* Inner shadow ring for depth */}
+        <mesh
+          position={[0, 0.003, -0.5]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <ringGeometry args={[3.85, 4.05, 64]} />
+          <meshBasicMaterial
+            color="#000000"
+            side={THREE.DoubleSide}
+            transparent
+            opacity={0.12}
           />
         </mesh>
 
@@ -271,7 +428,7 @@ export function GameTable3D({
                   position={position}
                   rotation={rotation}
                   index={i}
-                  scale={1.15}
+                  scale={isCompact ? 0.9 : 1.15}
                 />
                 {/* Player name label below the card */}
                 <Html
@@ -311,7 +468,7 @@ export function GameTable3D({
                     ]}
                     index={0}
                     faceDown
-                    scale={0.55}
+                    scale={isCompact ? 0.4 : 0.55}
                   />
                 </Suspense>
               )}
@@ -334,13 +491,15 @@ export function GameTable3D({
 
             {/* Opponent info overlay */}
             <Html
-              position={[p.px, 0.6, p.pz - 0.5]}
+              position={[p.px, 0.6, p.pz - (isCompact ? 0.3 : 0.5)]}
               center
               sprite
               style={{ pointerEvents: "none" }}
             >
               <div
                 className={`game3d-opponent${
+                  isCompact ? " compact" : ""
+                }${
                   game.turn_seat === p.seatIndex ? " active" : ""
                 }`}
               >
@@ -350,10 +509,14 @@ export function GameTable3D({
 
                 <div className="game3d-opponent-tags">
                   {game.dealer === p.seatIndex && (
-                    <span className="game3d-tag dealer">Dealer</span>
+                    <span className="game3d-tag dealer">
+                      {isCompact ? "D" : "Dealer"}
+                    </span>
                   )}
                   {game.bidder_seat === p.seatIndex && (
-                    <span className="game3d-tag bidder">Bidder</span>
+                    <span className="game3d-tag bidder">
+                      {isCompact ? "B" : "Bidder"}
+                    </span>
                   )}
                   {game.bherus
                     .filter(
@@ -363,12 +526,12 @@ export function GameTable3D({
                     )
                     .map((_, bi) => (
                       <span key={bi} className="game3d-tag bheru">
-                        Bheru
+                        {isCompact ? "P" : "Bheru"}
                       </span>
                     ))}
                   {!p.player?.is_connected && (
                     <span className="game3d-tag offline">
-                      Offline
+                      {isCompact ? "⚠" : "Offline"}
                     </span>
                   )}
                 </div>
@@ -380,7 +543,7 @@ export function GameTable3D({
                     </span>
                     <span className="game3d-pts">
                       {game.captured_points?.[p.seatIndex] ?? 0}{" "}
-                      pts
+                      {isCompact ? "p" : "pts"}
                     </span>
                   </div>
                 )}
@@ -524,3 +687,4 @@ export function GameTable3D({
     </div>
   );
 }
+

@@ -11,6 +11,7 @@ import json
 import logging
 from typing import Optional
 
+# pyrefly: ignore [missing-import]
 from fastapi import WebSocket
 
 logger = logging.getLogger("kadi_teeri.ws")

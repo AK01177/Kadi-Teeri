@@ -1,8 +1,24 @@
+import { useState, useEffect } from "react";
 import { useGameStore } from "../store/gameStore";
 
+const API_BASE =
+  import.meta.env.VITE_API_URL || "";
+
 export function LobbyPage() {
-  const { gameState, isHost, roomId, sendFn, showToast } =
+  const { gameState, isHost, roomId, sendFn, showToast, connectionMode } =
     useGameStore();
+
+  const [lanInfo, setLanInfo] = useState<{ lan_ips: string[]; port: number } | null>(null);
+
+  // Fetch LAN info if in local mode
+  useEffect(() => {
+    if (connectionMode === "local" && !lanInfo) {
+      fetch(`${API_BASE}/api/network-info`)
+        .then((r) => r.json())
+        .then((data) => setLanInfo(data))
+        .catch(() => setLanInfo(null));
+    }
+  }, [connectionMode, lanInfo]);
 
   if (!gameState || !roomId) return null;
 
@@ -17,6 +33,20 @@ export function LobbyPage() {
         .catch(() => showToast(roomId));
     } else {
       showToast(roomId || "");
+    }
+  };
+
+  const lanUrl = lanInfo?.lan_ips?.[0]
+    ? `http://${lanInfo.lan_ips[0]}:${lanInfo.port}`
+    : null;
+
+  const copyLanLink = () => {
+    if (lanUrl && navigator.clipboard) {
+      const fullLink = `${lanUrl} → Code: ${roomId}`;
+      navigator.clipboard
+        .writeText(fullLink)
+        .then(() => showToast("Link copied!"))
+        .catch(() => showToast(fullLink));
     }
   };
 
@@ -55,6 +85,21 @@ export function LobbyPage() {
         </button>
       </div>
 
+      {/* LAN share info */}
+      {connectionMode === "local" && lanUrl && (
+        <div className="lan-share-strip">
+          <div style={{ fontSize: "11px", color: "var(--muted)", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: "4px" }}>
+            Local Network
+          </div>
+          <div className="lan-url-display" onClick={copyLanLink} role="button" style={{ fontSize: "13px", padding: "6px 10px" }}>
+            {lanUrl} → <strong>{roomId}</strong>
+          </div>
+          <button className="btn btn-sm btn-teal" onClick={copyLanLink} style={{ width: "100%", marginTop: "6px" }}>
+            Copy link + code
+          </button>
+        </div>
+      )}
+
       {/* Configuration (host only) */}
       {isHost && (
         <div
@@ -79,8 +124,8 @@ export function LobbyPage() {
             >
               Players
             </div>
-            <div className="row">
-              {[4, 5, 6, 7, 8].map((n) => (
+            <div className="player-count-grid">
+              {[4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
                 <button
                   key={n}
                   className={`btn btn-sm${
@@ -93,6 +138,11 @@ export function LobbyPage() {
                 </button>
               ))}
             </div>
+            {config.player_count >= 9 && (
+              <div style={{ fontSize: "11px", color: "var(--teal)", marginTop: "6px" }}>
+                ℹ️ 2 decks required for 9+ players
+              </div>
+            )}
           </div>
 
           {/* Deck count */}
@@ -113,6 +163,7 @@ export function LobbyPage() {
                 }`}
                 onClick={() => setDeckCount(1)}
                 style={{ flex: 1 }}
+                disabled={config.player_count >= 9}
               >
                 1 Deck (52 cards)
               </button>
@@ -194,3 +245,4 @@ export function LobbyPage() {
     </div>
   );
 }
+

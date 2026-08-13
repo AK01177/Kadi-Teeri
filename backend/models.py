@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from enum import Enum
 from typing import Optional
+# pyrefly: ignore [missing-import]
 from pydantic import BaseModel, Field
 
 
@@ -130,7 +131,7 @@ class BheruCall(BaseModel):
 
 
 class RoomConfig(BaseModel):
-    player_count: int = Field(default=4, ge=4, le=8)
+    player_count: int = Field(default=4, ge=4, le=12)
     deck_count: int = Field(default=1, ge=1, le=2)
 
 

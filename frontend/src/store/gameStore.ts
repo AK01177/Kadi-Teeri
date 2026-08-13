@@ -9,6 +9,8 @@ interface GameStore {
   // Connection
   isConnected: boolean;
   setConnected: (v: boolean) => void;
+  connectionMode: "online" | "local";
+  setConnectionMode: (v: "online" | "local") => void;
 
   // Identity
   playerId: string | null;
@@ -77,6 +79,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   // Connection
   isConnected: false,
   setConnected: (v) => set({ isConnected: v }),
+  connectionMode: "online",
+  setConnectionMode: (v) => set({ connectionMode: v }),
 
   // Identity
   playerId: session?.playerId || null,
@@ -172,6 +176,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       bheruTabSuit: "S",
       selectedBheruCalls: [],
       isConnected: false,
+      connectionMode: "online",
     });
   },
 

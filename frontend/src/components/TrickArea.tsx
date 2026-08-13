@@ -8,12 +8,15 @@ interface TrickAreaProps {
 }
 
 export function TrickArea({ cardsPlayed, numPlayers, players }: TrickAreaProps) {
+  const isMany = numPlayers >= 6;
+  const areaClass = isMany ? "trick-area trick-area-grid" : "trick-area";
+
   return (
-    <div className="trick-area">
+    <div className={areaClass}>
       {Array.from({ length: numPlayers }, (_, i) => {
         const play = cardsPlayed.find((cp) => cp.seat === i);
         if (play) {
-          const playerName = players?.[i]?.name || `Player ${i + 1}`;
+          const playerName = players?.[i]?.name || `P${i + 1}`;
           return (
             <div key={i} className="trick-card-wrapper">
               <Card card={play.card} small />
@@ -26,3 +29,4 @@ export function TrickArea({ cardsPlayed, numPlayers, players }: TrickAreaProps) 
     </div>
   );
 }
+

@@ -9,15 +9,19 @@ interface GameTableProps {
 
 export function GameTable({ game, mySeat, showTrick }: GameTableProps) {
   const n = game.players.length;
+  const isLarge = n >= 6;
+  const compact = n >= 6;
 
-  // We want to render all players in a circle.
+  // Elliptical radii — stretch horizontally for more seats
+  const radiusX = isLarge ? 44 : 42;
+  const radiusY = isLarge ? 38 : 42;
+
   const seats = [];
   for (let i = 0; i < n; i++) {
     const seatIndex = (mySeat + i) % n;
     const angle = (Math.PI / 2) + (i * 2 * Math.PI) / n;
-    const radius = 42;
-    const x = 50 + radius * Math.cos(angle);
-    const y = 50 + radius * Math.sin(angle);
+    const x = 50 + radiusX * Math.cos(angle);
+    const y = 50 + radiusY * Math.sin(angle);
 
     seats.push({
       seatIndex,
@@ -27,8 +31,10 @@ export function GameTable({ game, mySeat, showTrick }: GameTableProps) {
     });
   }
 
+  const tableClass = `round-table${isLarge ? " round-table-large" : ""}`;
+
   return (
-    <div className="round-table">
+    <div className={tableClass}>
       {seats.map(({ seatIndex, player, x, y }) => (
         <div
           key={seatIndex}
@@ -47,6 +53,7 @@ export function GameTable({ game, mySeat, showTrick }: GameTableProps) {
               game={game}
               isActive={game.turn_seat === seatIndex}
               position=""
+              compact={compact}
             />
           ) : (
             <div className="seat-box empty">Empty</div>

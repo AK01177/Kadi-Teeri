@@ -122,6 +122,49 @@ async def get_room_info(room_id: str):
     )
 
 
+class NetworkInfoResponse(BaseModel):
+    lan_ips: list[str]
+    port: int
+    hostname: str
+
+
+@app.get("/api/network-info", response_model=NetworkInfoResponse)
+async def get_network_info():
+    """Return the server's LAN IP addresses for local play."""
+    import socket
+    lan_ips = []
+    hostname = socket.gethostname()
+    try:
+        # Get all network interfaces
+        for info in socket.getaddrinfo(hostname, None, socket.AF_INET):
+            ip = info[4][0]
+            if ip and not ip.startswith("127."):
+                if ip not in lan_ips:
+                    lan_ips.append(ip)
+    except Exception:
+        pass
+
+    # Fallback: connect to a public DNS to find the default route IP
+    if not lan_ips:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.settimeout(0.5)
+            # Doesn't actually send traffic — just determines outbound interface
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            if ip and not ip.startswith("127."):
+                lan_ips.append(ip)
+            s.close()
+        except Exception:
+            pass
+
+    return NetworkInfoResponse(
+        lan_ips=lan_ips,
+        port=int(os.environ.get("PORT", 8000)),
+        hostname=hostname,
+    )
+
+
 # ──────────────────────────── WebSocket Handler ────────────────────────────
 
 

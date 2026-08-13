@@ -1,15 +1,33 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useGameStore } from "../store/gameStore";
 
 const API_BASE =
   import.meta.env.VITE_API_URL || "";
 
 export function HomePage() {
-  const { playerName, setPlayerName, showToast } = useGameStore();
+  const { playerName, setPlayerName, showToast, connectionMode, setConnectionMode } = useGameStore();
   const [name, setName] = useState(playerName || "");
   const [joinCode, setJoinCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [lanInfo, setLanInfo] = useState<{ lan_ips: string[]; port: number; hostname: string } | null>(null);
+  const [lanLoading, setLanLoading] = useState(false);
 
+  // Fetch LAN info when switching to local mode
+  useEffect(() => {
+    if (connectionMode === "local" && !lanInfo) {
+      setLanLoading(true);
+      fetch(`${API_BASE}/api/network-info`)
+        .then((r) => r.json())
+        .then((data) => {
+          setLanInfo(data);
+          setLanLoading(false);
+        })
+        .catch(() => {
+          setLanInfo({ lan_ips: [], port: 8000, hostname: "unknown" });
+          setLanLoading(false);
+        });
+    }
+  }, [connectionMode, lanInfo]);
 
   const handleCreate = async () => {
     const trimmed = name.trim().slice(0, 18);
@@ -98,6 +116,19 @@ export function HomePage() {
     setLoading(false);
   };
 
+  const lanUrl = lanInfo?.lan_ips?.[0]
+    ? `http://${lanInfo.lan_ips[0]}:${lanInfo.port}`
+    : null;
+
+  const copyLanUrl = () => {
+    if (lanUrl && navigator.clipboard) {
+      navigator.clipboard
+        .writeText(lanUrl)
+        .then(() => showToast("LAN URL copied!"))
+        .catch(() => showToast(lanUrl));
+    }
+  };
+
   return (
     <>
       <div className="hero">
@@ -130,6 +161,58 @@ export function HomePage() {
       </div>
 
       <div className="panel">
+        {/* ── Mode Toggle ── */}
+        <div className="mode-toggle">
+          <button
+            className={`mode-toggle-btn${connectionMode === "online" ? " active" : ""}`}
+            onClick={() => setConnectionMode("online")}
+          >
+            <span className="mode-icon">🌐</span>
+            Online
+          </button>
+          <button
+            className={`mode-toggle-btn${connectionMode === "local" ? " active" : ""}`}
+            onClick={() => setConnectionMode("local")}
+          >
+            <span className="mode-icon">📶</span>
+            Local
+          </button>
+        </div>
+
+        {/* ── Local Mode: LAN Info ── */}
+        {connectionMode === "local" && (
+          <div className="lan-info-box">
+            <div className="lan-info-title">
+              <span className="lan-dot" /> Local Network Play
+            </div>
+            <p className="lan-info-desc">
+              One person hosts the server. Others connect to the same WiFi or
+              hotspot and open this URL in their browser:
+            </p>
+            {lanLoading ? (
+              <div className="lan-url-display">Detecting network…</div>
+            ) : lanUrl ? (
+              <>
+                <div className="lan-url-display" onClick={copyLanUrl} role="button">
+                  {lanUrl}
+                </div>
+                <button className="btn btn-sm btn-teal" onClick={copyLanUrl} style={{ width: "100%", marginTop: "6px" }}>
+                  Copy URL to share
+                </button>
+              </>
+            ) : (
+              <div className="lan-url-display" style={{ color: "var(--danger)" }}>
+                Could not detect LAN IP. Are you connected to a network?
+              </div>
+            )}
+            {lanInfo && lanInfo.lan_ips.length > 1 && (
+              <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "6px" }}>
+                Other IPs: {lanInfo.lan_ips.slice(1).join(", ")}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="home-actions">
           <input
             className="name-field"
@@ -182,8 +265,11 @@ export function HomePage() {
       </div>
 
       <div className="footer-note">
-        Share your room code with friends to play together — no accounts needed.
+        {connectionMode === "online"
+          ? "Share your room code with friends to play together — no accounts needed."
+          : "All players must be on the same WiFi or hotspot. No internet needed!"}
       </div>
     </>
   );
 }
+
