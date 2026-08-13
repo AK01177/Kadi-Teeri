@@ -423,6 +423,17 @@ async def handle_message(
         if error:
             await ws.send_json({"type": "error", "error": error})
             return
+            
+        # If the target is currently connected, gracefully disconnect them
+        target_ws = ws_manager.get_ws(target_id)
+        if target_ws:
+            try:
+                await target_ws.send_json({"type": "error", "error": "You have been kicked by the host."})
+                await target_ws.close()
+            except Exception:
+                pass
+            ws_manager.remove(target_id)
+            
         await _broadcast_full_state(room_id, game)
 
     else:

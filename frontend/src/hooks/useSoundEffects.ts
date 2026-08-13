@@ -19,6 +19,19 @@ playerJoinAudio.preload = "auto";
 gameStartAudio.preload = "auto";
 bidClickAudio.preload = "auto";
 
+const playSound = (audioNode: HTMLAudioElement) => {
+  try {
+    const clone = audioNode.cloneNode() as HTMLAudioElement;
+    clone.volume = 0.8;
+    clone.play().catch(e => {
+      // Browsers may block audio without user interaction
+      console.warn("Audio play failed (interaction required?):", e);
+    });
+  } catch (err) {
+    console.error("Audio error:", err);
+  }
+};
+
 export function useSoundEffects() {
   const { gameState, seat, trickWinner, pendingBid } = useGameStore();
   
@@ -35,21 +48,18 @@ export function useSoundEffects() {
     // Check for player joins
     const currentConnectedCount = gameState.players.filter(p => p.is_connected).length;
     if (currentConnectedCount > prevConnectedCount.current && gameState.status === "lobby") {
-      playerJoinAudio.currentTime = 0;
-      playerJoinAudio.play().catch(() => {});
+      playSound(playerJoinAudio);
     }
     prevConnectedCount.current = currentConnectedCount;
 
     // Check for game start
     if (gameState.status === "bidding" && prevGameStatus.current === "lobby") {
-      gameStartAudio.currentTime = 0;
-      gameStartAudio.play().catch(() => {});
+      playSound(gameStartAudio);
     }
 
     // Check for bid adjustment
     if (pendingBid !== null && prevPendingBid.current !== null && pendingBid !== prevPendingBid.current) {
-      bidClickAudio.currentTime = 0;
-      bidClickAudio.play().catch(() => {});
+      playSound(bidClickAudio);
       // Optional subtle haptic for bid click
       if (typeof navigator !== "undefined" && navigator.vibrate) {
         navigator.vibrate(10); 
@@ -64,8 +74,7 @@ export function useSoundEffects() {
       gameState.status === "playing"
     ) {
       // A new card was played
-      cardPlayAudio.currentTime = 0;
-      cardPlayAudio.play().catch(() => {}); // catch needed because browsers block autoplay without interaction
+      playSound(cardPlayAudio);
     }
     prevCardsPlayedCount.current = currentCardsCount;
 
@@ -75,8 +84,7 @@ export function useSoundEffects() {
       prevTurnSeat.current !== seat &&
       gameState.status === "playing"
     ) {
-      yourTurnAudio.currentTime = 0;
-      yourTurnAudio.play().catch(() => {});
+      playSound(yourTurnAudio);
       
       // Haptic feedback (vibrate 50ms)
       if (typeof navigator !== "undefined" && navigator.vibrate) {
@@ -87,8 +95,7 @@ export function useSoundEffects() {
 
     // 3. Check for trick won
     if (trickWinner && prevTrickWinner.current !== trickWinner.name) {
-      trickWonAudio.currentTime = 0;
-      trickWonAudio.play().catch(() => {});
+      playSound(trickWonAudio);
       
       // Extra happy haptics if *we* won the trick
       if (trickWinner.name === gameState.players[seat]?.name) {
@@ -104,8 +111,7 @@ export function useSoundEffects() {
       gameState.status === "round_end" &&
       prevGameStatus.current === "playing"
     ) {
-      gameOverAudio.currentTime = 0;
-      gameOverAudio.play().catch(() => {});
+      playSound(gameOverAudio);
       
       if (typeof navigator !== "undefined" && navigator.vibrate) {
         navigator.vibrate([100, 50, 100, 50, 200]); // long success vibration

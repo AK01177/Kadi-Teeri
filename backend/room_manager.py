@@ -348,8 +348,6 @@ class RoomManager:
         target = next((p for p in game.players if p.id == target_player_id), None)
         if not target:
             return "Player not found."
-        if target.is_connected:
-            return "Can only remove disconnected players."
 
         game.players = [p for p in game.players if p.id != target_player_id]
         self._player_rooms.pop(target_player_id, None)

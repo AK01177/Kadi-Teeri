@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useGameStore } from "../store/gameStore";
+import { HowToPlayModal } from "../components/HowToPlayModal";
 
 const API_BASE =
   import.meta.env.VITE_API_URL || "";
@@ -11,6 +12,7 @@ export function HomePage() {
   const [loading, setLoading] = useState(false);
   const [lanInfo, setLanInfo] = useState<{ lan_ips: string[]; port: number; hostname: string } | null>(null);
   const [lanLoading, setLanLoading] = useState(false);
+  const [showIntro, setShowIntro] = useState(() => !localStorage.getItem("kadi_intro_seen"));
 
   // Fetch LAN info when switching to local mode
   useEffect(() => {
@@ -269,6 +271,18 @@ export function HomePage() {
           ? "Share your room code with friends to play together — no accounts needed."
           : "All players must be on the same WiFi or hotspot. No internet needed!"}
       </div>
+
+      <div style={{ textAlign: "center", marginTop: "24px", marginBottom: "32px" }}>
+        <button 
+          className="btn btn-ghost btn-sm" 
+          onClick={() => setShowIntro(true)}
+          style={{ textDecoration: "underline" }}
+        >
+          View full game rules & instructions
+        </button>
+      </div>
+
+      {showIntro && <HowToPlayModal onClose={() => setShowIntro(false)} />}
     </>
   );
 }
