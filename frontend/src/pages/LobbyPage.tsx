@@ -36,8 +36,10 @@ export function LobbyPage() {
     }
   };
 
-  const lanUrl = lanInfo?.lan_ips?.[0]
-    ? `http://${lanInfo.lan_ips[0]}${window.location.port ? `:${window.location.port}` : ""}`
+  const isDev = import.meta.env.DEV;
+  const networkPort = isDev ? 5173 : lanInfo?.port;
+  const lanUrl = lanInfo?.lan_ips?.[0] && networkPort
+    ? `http://${lanInfo.lan_ips[0]}:${networkPort}`
     : null;
 
   const copyLanLink = () => {
