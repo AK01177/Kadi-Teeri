@@ -132,34 +132,48 @@ class NetworkInfoResponse(BaseModel):
 async def get_network_info():
     """Return the server's LAN IP addresses for local play."""
     import socket
-    lan_ips = []
+    import subprocess
+    import platform
+    
+    lan_ips = set()
     hostname = socket.gethostname()
+    
+    # 1. Try standard getaddrinfo
     try:
-        # Get all network interfaces
         for info in socket.getaddrinfo(hostname, None, socket.AF_INET):
             ip = info[4][0]
             if ip and not ip.startswith("127."):
-                if ip not in lan_ips:
-                    lan_ips.append(ip)
+                lan_ips.add(ip)
     except Exception:
         pass
 
-    # Fallback: connect to a public DNS to find the default route IP
-    if not lan_ips:
+    # 2. Try dummy UDP connections (works even if default gateway is missing for some subnets)
+    # We try both a public IP and common private gateways
+    dummy_ips = ["8.8.8.8", "192.168.1.1", "10.0.0.1", "172.16.0.1", "192.168.43.1"]
+    for test_ip in dummy_ips:
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.settimeout(0.5)
-            # Doesn't actually send traffic — just determines outbound interface
-            s.connect(("8.8.8.8", 80))
+            s.settimeout(0.2)
+            s.connect((test_ip, 80))
             ip = s.getsockname()[0]
             if ip and not ip.startswith("127."):
-                lan_ips.append(ip)
+                lan_ips.add(ip)
             s.close()
         except Exception:
             pass
 
+    # 3. If on Linux/Mac, try hostname -I or ifconfig as a highly reliable fallback
+    if platform.system() != "Windows":
+        try:
+            output = subprocess.check_output(["hostname", "-I"], stderr=subprocess.DEVNULL).decode("utf-8")
+            for ip in output.split():
+                if ip and not ip.startswith("127."):
+                    lan_ips.add(ip)
+        except Exception:
+            pass
+
     return NetworkInfoResponse(
-        lan_ips=lan_ips,
+        lan_ips=list(lan_ips),
         port=int(os.environ.get("PORT", 8000)),
         hostname=hostname,
     )
