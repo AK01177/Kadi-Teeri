@@ -12,6 +12,7 @@ export interface Player {
   seat: number;
   is_host: boolean;
   is_connected: boolean;
+  ping_ms?: number;
 }
 
 export interface RoomConfig {
@@ -171,4 +172,14 @@ export interface TrickWinnerMessage {
   points: number;
 }
 
-export type ServerMessage = WelcomeMessage | GameStateMessage | ErrorMessage | TrickWinnerMessage;
+export interface PongMessage {
+  type: "pong";
+}
+
+export interface PingUpdateMessage {
+  type: "ping_update";
+  player_id: string;
+  ping_ms: number;
+}
+
+export type ServerMessage = WelcomeMessage | GameStateMessage | ErrorMessage | TrickWinnerMessage | PongMessage | PingUpdateMessage;

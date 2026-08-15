@@ -35,6 +35,8 @@ interface GameStore {
   trickWinner: { name: string; points: number } | null;
   setTrickWinner: (v: { name: string; points: number } | null) => void;
 
+  setPingUpdate: (playerId: string, pingMs: number) => void;
+
   // View Settings
   is3DView: boolean;
   setIs3DView: (v: boolean) => void;
@@ -119,6 +121,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   trickWinner: null,
   setTrickWinner: (v) => set({ trickWinner: v }),
+
+  setPingUpdate: (playerId, pingMs) => set((state) => {
+    if (!state.gameState) return state;
+    return {
+      gameState: {
+        ...state.gameState,
+        players: state.gameState.players.map(p => p.id === playerId ? { ...p, ping_ms: pingMs } : p)
+      }
+    };
+  }),
 
   // View Settings
   is3DView: true,

@@ -218,6 +218,16 @@ export function LobbyPage() {
                     useGameStore.getState().playerId
                     ? " (you)"
                     : ""}
+                  {p.ping_ms !== undefined && (
+                    <span className="ping-indicator" style={{
+                      fontSize: "11px",
+                      marginLeft: "8px",
+                      color: p.ping_ms < 60 ? "#4ade80" : p.ping_ms < 150 ? "#fbbf24" : "#ef4444",
+                      fontWeight: "bold",
+                    }}>
+                      {p.ping_ms}ms
+                    </span>
+                  )}
                 </span>
                 {p.is_host && <span className="host-tag">HOST</span>}
                 {isHost && p.id !== useGameStore.getState().playerId && (

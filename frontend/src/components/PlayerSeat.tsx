@@ -20,7 +20,21 @@ export function PlayerSeat({ player, game, isActive, position, compact }: Player
 
   return (
     <div className={cls}>
-      <div className="nm">{player.name}</div>
+      <div className="nm">
+        {player.name}
+        {player.ping_ms !== undefined && (
+          <span className="ping-indicator" style={{
+            fontSize: "10px",
+            marginLeft: "6px",
+            color: player.ping_ms < 60 ? "#4ade80" : player.ping_ms < 150 ? "#fbbf24" : "#ef4444",
+            fontWeight: "bold",
+            display: "inline-block",
+            verticalAlign: "middle",
+          }}>
+            {player.ping_ms}ms
+          </span>
+        )}
+      </div>
       <div className="tags">
         {game.dealer === player.seat && (
           <span className="mini-tag dealer">

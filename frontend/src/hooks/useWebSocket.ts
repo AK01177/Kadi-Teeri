@@ -29,6 +29,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
   const intentionalCloseRef = useRef(false);
   const [isConnected, setIsConnected] = useState(false);
   const lastPongRef = useRef(0);
+  const lastPingSentRef = useRef(0);
 
   const optionsRef = useRef(options);
   optionsRef.current = options;
@@ -74,6 +75,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 
           // Start heartbeat
           pingTimerRef.current = setInterval(() => {
+            lastPingSentRef.current = Date.now();
             send({ type: "ping" }, true);
             
             // If we haven't received a pong in PONG_TIMEOUT_MS, force reconnect
@@ -88,7 +90,12 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
           try {
             const msg = JSON.parse(event.data) as ServerMessage;
             if (msg.type === "pong") {
+              const pingMs = Date.now() - lastPingSentRef.current;
               lastPongRef.current = Date.now();
+              // Only send ping update if we have a reasonable ping value
+              if (pingMs >= 0 && pingMs < 5000) {
+                 send({ type: "update_ping", ping_ms: pingMs }, true);
+              }
               return; // Handled heartbeat, don't pass to app
             }
             optionsRef.current.onMessage(msg);

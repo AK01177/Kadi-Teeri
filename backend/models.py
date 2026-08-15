@@ -115,6 +115,7 @@ class Player(BaseModel):
     seat: int
     is_host: bool = False
     is_connected: bool = True
+    ping_ms: Optional[int] = None
 
 
 # ──────────────────────────── Bheru Call ────────────────────────────
@@ -241,6 +242,7 @@ class ClientMessage(BaseModel):
     rank: Optional[str] = None
     deck_index: Optional[int] = None
     calls: Optional[list[BheruCall]] = None
+    ping_ms: Optional[int] = None
 
 
 class ServerMessage(BaseModel):
@@ -258,3 +260,4 @@ class ServerMessage(BaseModel):
     error: Optional[str] = None
     is_host: Optional[bool] = None
     seat: Optional[int] = None
+    ping_ms: Optional[int] = None

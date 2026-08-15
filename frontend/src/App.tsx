@@ -60,6 +60,9 @@ function App() {
             points: msg.points as number,
           });
           break;
+        case "ping_update":
+          useGameStore.getState().setPingUpdate(msg.player_id as string, msg.ping_ms as number);
+          break;
         case "error":
           showToast(msg.error);
           break;

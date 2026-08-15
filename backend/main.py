@@ -432,6 +432,15 @@ async def handle_message(
             return
         await _broadcast_full_state(room_id, game)
 
+    elif msg.type == "update_ping":
+        if msg.ping_ms is not None:
+            player.ping_ms = msg.ping_ms
+            await ws_manager.broadcast(room_id, {
+                "type": "ping_update",
+                "player_id": player_id,
+                "ping_ms": player.ping_ms
+            })
+
     elif msg.type == "remove_player":
         target_id = raw_data.get("target_player_id")
         if not target_id:
