@@ -200,6 +200,25 @@ function App() {
 
   return (
     <div id="app">
+      {/* UI Overlay for reconnecting state */}
+      {!isConnected && roomId && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: "var(--danger)",
+          color: "white",
+          textAlign: "center",
+          padding: "8px",
+          zIndex: 9999,
+          fontWeight: "bold",
+          fontSize: "14px",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.5)"
+        }}>
+          Reconnecting to game server...
+        </div>
+      )}
       {/* Top bar (shown when in a room) */}
       {roomId && gameState && (
         <div className="topbar">

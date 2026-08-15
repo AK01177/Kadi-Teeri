@@ -280,6 +280,10 @@ async def websocket_endpoint(ws: WebSocket, room_id: str):
                 await ws.send_json({"type": "error", "error": f"Invalid message: {e}"})
                 continue
 
+            if msg.type == "ping":
+                await ws.send_json({"type": "pong"})
+                continue
+
             await handle_message(ws, room_id, player_id, msg, raw_data)
 
     except WebSocketDisconnect:
