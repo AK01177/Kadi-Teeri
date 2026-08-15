@@ -281,8 +281,8 @@ export function HomePage() {
       </div>
 
       <div style={{ textAlign: "center", marginTop: "24px", marginBottom: "32px" }}>
-        <button 
-          className="btn btn-ghost btn-sm" 
+        <button
+          className="btn btn-ghost btn-sm"
           onClick={() => setShowIntro(true)}
           style={{ textDecoration: "underline" }}
         >
