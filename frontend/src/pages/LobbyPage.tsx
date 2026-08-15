@@ -95,16 +95,29 @@ export function LobbyPage() {
 
       {/* LAN share info */}
       {connectionMode === "local" && lanUrl && (
-        <div className="lan-share-strip">
-          <div style={{ fontSize: "11px", color: "var(--muted)", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: "4px" }}>
-            Local Network
-          </div>
-          <div className="lan-url-display" onClick={copyLanLink} role="button" style={{ fontSize: "13px", padding: "6px 10px" }}>
-            {lanUrl} → <strong>{roomId}</strong>
-          </div>
-          <button className="btn btn-sm btn-teal" onClick={copyLanLink} style={{ width: "100%", marginTop: "6px" }}>
-            Copy link + code
-          </button>
+        <div className="lan-info-box" style={{ marginTop: "1rem" }}>
+          {window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? (
+            <>
+              <div className="lan-info-title">
+                <span className="lan-dot" /> Local Network Game
+              </div>
+              <p className="lan-info-desc">
+                Tell others on your WiFi/hotspot to open this URL to join directly:
+              </p>
+              <div className="lan-url-display" onClick={copyLanLink} role="button" style={{ fontSize: "13px", padding: "6px 10px" }}>
+                {lanUrl} → <strong>{roomId}</strong>
+              </div>
+              <button className="btn btn-sm btn-teal" onClick={copyLanLink} style={{ width: "100%", marginTop: "6px" }}>
+                Copy link + code
+              </button>
+            </>
+          ) : (
+            <div style={{ padding: "4px 0" }}>
+              <p className="lan-info-desc" style={{ color: "var(--danger)" }}>
+                You are on the cloud version. For fully offline play, run the game locally on your computer.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

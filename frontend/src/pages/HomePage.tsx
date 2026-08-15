@@ -195,29 +195,42 @@ export function HomePage() {
             <div className="lan-info-title">
               <span className="lan-dot" /> Local Network Play
             </div>
-            <p className="lan-info-desc">
-              One person hosts the server. Others connect to the same WiFi or
-              hotspot and open this URL in their browser:
-            </p>
-            {lanLoading ? (
-              <div className="lan-url-display">Detecting network…</div>
-            ) : lanUrl ? (
+            {window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? (
               <>
-                <div className="lan-url-display" onClick={copyLanUrl} role="button">
-                  {lanUrl}
-                </div>
-                <button className="btn btn-sm btn-teal" onClick={copyLanUrl} style={{ width: "100%", marginTop: "6px" }}>
-                  Copy URL to share
-                </button>
+                <p className="lan-info-desc">
+                  One person hosts the server. Others connect to the same WiFi or
+                  hotspot and open this URL in their browser:
+                </p>
+                {lanLoading ? (
+                  <div className="lan-url-display">Detecting network…</div>
+                ) : lanUrl ? (
+                  <>
+                    <div className="lan-url-display" onClick={copyLanUrl} role="button">
+                      {lanUrl}
+                    </div>
+                    <button className="btn btn-sm btn-teal" onClick={copyLanUrl} style={{ width: "100%", marginTop: "6px" }}>
+                      Copy URL to share
+                    </button>
+                  </>
+                ) : (
+                  <div className="lan-url-display" style={{ color: "var(--danger)" }}>
+                    Could not detect LAN IP. Are you connected to a network?
+                  </div>
+                )}
+                {lanInfo && lanInfo.lan_ips.length > 1 && (
+                  <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "6px" }}>
+                    Other IPs: {lanInfo.lan_ips.slice(1).join(", ")}
+                  </div>
+                )}
               </>
             ) : (
-              <div className="lan-url-display" style={{ color: "var(--danger)" }}>
-                Could not detect LAN IP. Are you connected to a network?
-              </div>
-            )}
-            {lanInfo && lanInfo.lan_ips.length > 1 && (
-              <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "6px" }}>
-                Other IPs: {lanInfo.lan_ips.slice(1).join(", ")}
+              <div style={{ padding: "8px 0" }}>
+                <p className="lan-info-desc" style={{ color: "var(--danger)" }}>
+                  You are currently using the cloud-hosted version, which requires an active internet connection.
+                </p>
+                <p className="lan-info-desc" style={{ marginTop: "8px" }}>
+                  To play <b>completely offline</b> via a mobile hotspot, you must download the game files from GitHub and run the server locally on your own computer.
+                </p>
               </div>
             )}
           </div>
