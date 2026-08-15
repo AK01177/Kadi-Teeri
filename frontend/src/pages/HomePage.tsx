@@ -118,9 +118,17 @@ export function HomePage() {
     setLoading(false);
   };
 
-  const lanUrl = lanInfo?.lan_ips?.[0]
-    ? `http://${lanInfo.lan_ips[0]}:${lanInfo.port}`
-    : null;
+  const isDev = import.meta.env.DEV;
+  let baseUrl = "";
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    const networkPort = isDev ? 5173 : lanInfo?.port;
+    if (lanInfo?.lan_ips?.[0] && networkPort) {
+      baseUrl = `http://${lanInfo.lan_ips[0]}:${networkPort}`;
+    }
+  } else {
+    baseUrl = window.location.origin;
+  }
+  const lanUrl = baseUrl || null;
 
   const copyLanUrl = () => {
     if (lanUrl && navigator.clipboard) {

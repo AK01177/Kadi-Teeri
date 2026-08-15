@@ -37,10 +37,16 @@ export function LobbyPage() {
   };
 
   const isDev = import.meta.env.DEV;
-  const networkPort = isDev ? 5173 : lanInfo?.port;
-  const lanUrl = lanInfo?.lan_ips?.[0] && networkPort
-    ? `http://${lanInfo.lan_ips[0]}:${networkPort}`
-    : null;
+  let baseUrl = "";
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    const networkPort = isDev ? 5173 : lanInfo?.port;
+    if (lanInfo?.lan_ips?.[0] && networkPort) {
+      baseUrl = `http://${lanInfo.lan_ips[0]}:${networkPort}`;
+    }
+  } else {
+    baseUrl = window.location.origin;
+  }
+  const lanUrl = baseUrl || null;
 
   const copyLanLink = () => {
     if (lanUrl && navigator.clipboard) {
@@ -130,9 +136,8 @@ export function LobbyPage() {
               {[4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
                 <button
                   key={n}
-                  className={`btn btn-sm${
-                    config.player_count === n ? " btn-primary" : ""
-                  }`}
+                  className={`btn btn-sm${config.player_count === n ? " btn-primary" : ""
+                    }`}
                   onClick={() => setPlayerCount(n)}
                   disabled={n < game.players.length}
                 >
@@ -160,9 +165,8 @@ export function LobbyPage() {
             </div>
             <div className="row">
               <button
-                className={`btn btn-sm${
-                  config.deck_count === 1 ? " btn-primary" : ""
-                }`}
+                className={`btn btn-sm${config.deck_count === 1 ? " btn-primary" : ""
+                  }`}
                 onClick={() => setDeckCount(1)}
                 style={{ flex: 1 }}
                 disabled={config.player_count >= 9}
@@ -170,9 +174,8 @@ export function LobbyPage() {
                 1 Deck (52 cards)
               </button>
               <button
-                className={`btn btn-sm${
-                  config.deck_count === 2 ? " btn-primary" : ""
-                }`}
+                className={`btn btn-sm${config.deck_count === 2 ? " btn-primary" : ""
+                  }`}
                 onClick={() => setDeckCount(2)}
                 style={{ flex: 1 }}
               >
@@ -199,7 +202,7 @@ export function LobbyPage() {
                 <span>
                   {p.name}
                   {p.id ===
-                  useGameStore.getState().playerId
+                    useGameStore.getState().playerId
                     ? " (you)"
                     : ""}
                 </span>
