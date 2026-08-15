@@ -37,7 +37,7 @@ export function LobbyPage() {
   };
 
   const lanUrl = lanInfo?.lan_ips?.[0]
-    ? `http://${lanInfo.lan_ips[0]}:${lanInfo.port}`
+    ? `http://${lanInfo.lan_ips[0]}${window.location.port ? `:${window.location.port}` : ""}`
     : null;
 
   const copyLanLink = () => {
