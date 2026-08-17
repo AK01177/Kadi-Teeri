@@ -1,8 +1,8 @@
 /* ──────────────────────────────────────────────────────────────
-   GameTable3D Fullscreen Styles (Perfected)
+   GameTable3D Fullscreen Styles
    ────────────────────────────────────────────────────────────── */
 
-/* Container: forces full width/height in mobile landscape */
+/* Container */
 .game3d-fullscreen {
   position: fixed;
   top: 0;
@@ -10,42 +10,40 @@
   width: 100vw;
   height: 100dvh;
   z-index: 9999;
-  background-color: #050505; /* Deep rich dark background */
+  background-color: #050505;
   overflow: hidden;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   user-select: none;
   -webkit-user-select: none;
 }
 
-/* HUD Top Overlay */
+/* ─── HUD Top Bar ─── */
 .game3d-hud {
   position: absolute;
-  top: env(safe-area-inset-top, 20px);
-  left: env(safe-area-inset-left, 20px);
-  right: env(safe-area-inset-right, 20px);
+  top: env(safe-area-inset-top, 16px);
+  left: env(safe-area-inset-left, 16px);
+  right: env(safe-area-inset-right, 16px);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   pointer-events: none;
   z-index: 1000;
-  transition: opacity 0.3s ease;
 }
 
 .game3d-hud-left {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   max-width: 80%;
   pointer-events: auto;
 }
 
-/* Modern Glassmorphism Badges */
 .game3d-badge {
   background: rgba(15, 20, 25, 0.65);
   color: #f0f0f0;
-  padding: 6px 12px;
-  border-radius: 16px;
-  font-size: 13px;
+  padding: 5px 10px;
+  border-radius: 14px;
+  font-size: 12px;
   font-weight: 600;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -53,41 +51,43 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .game3d-badge.trump {
-  background: rgba(220, 38, 38, 0.7); /* Richer Red */
+  background: rgba(220, 38, 38, 0.7);
   border-color: rgba(255, 100, 100, 0.5);
-  box-shadow: 0 0 15px rgba(220, 38, 38, 0.4);
+  box-shadow: 0 0 12px rgba(220, 38, 38, 0.4);
 }
 
 .game3d-badge.target {
-  background: rgba(37, 99, 235, 0.7); /* Royal Blue */
+  background: rgba(37, 99, 235, 0.7);
   border-color: rgba(100, 180, 255, 0.5);
 }
 
 .game3d-badge.calls {
-  background: rgba(13, 148, 136, 0.7); /* Deep Teal */
+  background: rgba(13, 148, 136, 0.7);
   border-color: rgba(20, 184, 166, 0.5);
 }
 
+/* ─── Close / Fullscreen Buttons ─── */
 .game3d-close-btn {
   pointer-events: auto;
   background: rgba(20, 20, 20, 0.7);
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 18px;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1.2);
+  transition: all 0.2s ease;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .game3d-close-btn:hover {
@@ -96,38 +96,32 @@
   transform: scale(1.1);
 }
 
-/* Info Banners (Solo, Bheru) */
+/* ─── Info Banners (Solo, Bheru) ─── */
 .game3d-banners {
   position: absolute;
-  top: 75px;
+  top: 60px;
   left: 0;
   right: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   pointer-events: none;
   z-index: 1000;
 }
 
 .game3d-info-banner {
   background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.9), transparent);
-  color: #facc15; /* Golden warning text */
-  padding: 8px 32px;
-  font-size: 14px;
+  color: #facc15;
+  padding: 6px 24px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  text-shadow: 0 2px 4px rgba(0,0,0,1);
-  animation: game3d-slide-down 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 1);
 }
 
-@keyframes game3d-slide-down {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Turn Indicator */
+/* ─── Turn Indicator ─── */
 .game3d-turn {
   position: absolute;
   top: 52%;
@@ -135,44 +129,44 @@
   transform: translate(-50%, -50%);
   background: rgba(15, 20, 25, 0.7);
   color: #a0a0a0;
-  padding: 10px 24px;
-  border-radius: 30px;
-  font-size: 15px;
+  padding: 8px 20px;
+  border-radius: 24px;
+  font-size: 14px;
   pointer-events: none;
   z-index: 998;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: all 0.3s ease;
   white-space: nowrap;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 
 .game3d-turn.mine {
-  background: rgba(16, 185, 129, 0.9); /* Emerald Green */
-  color: #ffffff;
+  background: rgba(16, 185, 129, 0.9);
+  color: #fff;
   border-color: rgba(52, 211, 153, 0.6);
   font-weight: 700;
-  font-size: 18px;
-  padding: 12px 30px;
-  box-shadow: 0 0 25px rgba(16, 185, 129, 0.4);
+  font-size: 16px;
+  padding: 10px 24px;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
   animation: game3d-pulse 2.5s infinite;
 }
 
 @keyframes game3d-pulse {
-  0% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); transform: translate(-50%, -50%) scale(1); }
-  50% { box-shadow: 0 0 35px rgba(16, 185, 129, 0.7); transform: translate(-50%, -50%) scale(1.03); }
-  100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); transform: translate(-50%, -50%) scale(1); }
+  0%   { box-shadow: 0 0 12px rgba(16, 185, 129, 0.3); transform: translate(-50%, -50%) scale(1); }
+  50%  { box-shadow: 0 0 30px rgba(16, 185, 129, 0.7); transform: translate(-50%, -50%) scale(1.02); }
+  100% { box-shadow: 0 0 12px rgba(16, 185, 129, 0.3); transform: translate(-50%, -50%) scale(1); }
 }
 
-/* Horizontal Scroll Hand Strip */
+/* ─── Hand Strip at Bottom ─── */
 .game3d-hand {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 15px 0 env(safe-area-inset-bottom, 15px);
-  background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 100%);
+  padding: 12px 0 env(safe-area-inset-bottom, 12px);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.6) 40%, rgba(0, 0, 0, 0) 100%);
   pointer-events: auto;
   z-index: 1000;
   display: flex;
@@ -181,47 +175,45 @@
 
 .game3d-hand-scroll {
   display: flex;
-  gap: 12px;
-  padding: 10px 20px 20px; /* Extra bottom padding for hover lifting */
+  gap: 10px;
+  padding: 8px 16px 16px;
   overflow-x: auto;
   overflow-y: visible;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   max-width: 100%;
-  /* Enable hardware acceleration for smooth mobile scrolling */
   -webkit-overflow-scrolling: touch;
 }
 
 .game3d-hand-scroll::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
+  display: none;
 }
 
-/* Make sure the 2D cards look vivid inside the scroll area */
 .game3d-hand-scroll .card-button {
   flex-shrink: 0;
-  width: clamp(75px, 14vh, 110px);
-  height: clamp(105px, 19vh, 154px);
+  width: clamp(70px, 13vh, 100px);
+  height: clamp(98px, 18vh, 140px);
   transform-origin: bottom center;
   transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1.2), box-shadow 0.25s ease;
-  border-radius: 8px;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.6);
-  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .game3d-hand-scroll .card-button:hover:not(:disabled) {
-  transform: translateY(-25px) scale(1.15);
-  box-shadow: 0 15px 30px rgba(0,0,0,0.9);
+  transform: translateY(-20px) scale(1.1);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.8);
   z-index: 10;
-  border-color: rgba(255,255,255,0.3);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .game3d-hand-scroll .card-button:disabled {
   opacity: 0.6;
   filter: grayscale(0.8) brightness(0.6);
-  transform: translateY(15px);
+  transform: translateY(12px);
 }
 
-/* Trick Winner Overlay */
+/* ─── Trick Winner Overlay ─── */
 .game3d-trick-winner {
   position: absolute;
   inset: 0;
@@ -234,218 +226,279 @@
   justify-content: center;
   z-index: 10000;
   pointer-events: none;
-  animation: game3d-fade-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: game3d-fade-in 0.4s ease forwards;
 }
 
 .game3d-trick-winner h2 {
   color: #fff;
-  font-size: clamp(32px, 5vw, 48px);
-  margin: 0 0 12px 0;
-  text-shadow: 0 4px 15px rgba(0,0,0,0.7);
-  letter-spacing: 1px;
+  font-size: clamp(28px, 5vw, 44px);
+  margin: 0 0 10px 0;
+  text-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
 }
 
 .game3d-trick-winner p {
-  color: #34d399; /* Emerald 400 */
-  font-size: clamp(24px, 4vw, 36px);
+  color: #34d399;
+  font-size: clamp(20px, 4vw, 32px);
   font-weight: 800;
   margin: 0;
-  text-shadow: 0 4px 15px rgba(0,0,0,0.7);
+  text-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
 }
 
 @keyframes game3d-fade-in {
   from { opacity: 0; transform: scale(0.85); }
-  to { opacity: 1; transform: scale(1); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
-/* HTML Overlays in 3D Scene */
+/* ─── 3D Scene: Opponent Overlays ─── */
 .game3d-opponent {
   background: rgba(20, 25, 30, 0.75);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 12px;
-  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 8px 12px;
   color: white;
-  min-width: 130px;
+  min-width: 110px;
   text-align: center;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+  transition: all 0.3s ease;
 }
 
-/* Compact opponent overlay for 6+ players */
 .game3d-opponent.compact {
-  min-width: 80px;
-  max-width: 100px;
-  padding: 6px 8px;
-  border-radius: 8px;
+  min-width: 70px;
+  max-width: 90px;
+  padding: 4px 6px;
+  border-radius: 6px;
 }
 
 .game3d-opponent.compact .game3d-opponent-name {
-  font-size: 11px;
-  max-width: 80px;
-  margin-bottom: 4px;
+  font-size: 10px;
+  max-width: 70px;
+  margin-bottom: 2px;
 }
 
 .game3d-opponent.compact .game3d-opponent-tags {
-  gap: 3px;
-  margin-bottom: 4px;
+  gap: 2px;
+  margin-bottom: 3px;
 }
 
 .game3d-opponent.compact .game3d-tag {
-  font-size: 9px;
-  padding: 2px 4px;
+  font-size: 8px;
+  padding: 1px 3px;
 }
 
 .game3d-opponent.compact .game3d-opponent-stats {
-  font-size: 11px;
-  padding-top: 3px;
+  font-size: 10px;
+  padding-top: 2px;
 }
 
 .game3d-opponent.active {
   background: rgba(30, 35, 40, 0.85);
-  border-color: rgba(250, 204, 21, 0.7); /* Yellow 400 */
-  box-shadow: 0 0 20px rgba(250, 204, 21, 0.3);
-  transform: translateY(-5px) scale(1.08);
+  border-color: rgba(250, 204, 21, 0.7);
+  box-shadow: 0 0 18px rgba(250, 204, 21, 0.3);
+  transform: translateY(-3px) scale(1.05);
 }
 
 .game3d-opponent-name {
   font-weight: 700;
-  font-size: 15px;
-  margin-bottom: 6px;
+  font-size: 14px;
+  margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .game3d-opponent-tags {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 5px;
-  margin-bottom: 8px;
+  gap: 4px;
+  margin-bottom: 6px;
 }
 
 .game3d-tag {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 12px;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.game3d-tag.dealer { background: linear-gradient(135deg, #3b82f6, #2563eb); } /* Blue */
-.game3d-tag.bidder { background: linear-gradient(135deg, #ef4444, #dc2626); } /* Red */
-.game3d-tag.bheru { background: linear-gradient(135deg, #10b981, #059669); } /* Green */
-.game3d-tag.offline { background: linear-gradient(135deg, #6b7280, #4b5563); } /* Gray */
+.game3d-tag.dealer { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.game3d-tag.bidder { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.game3d-tag.bheru  { background: linear-gradient(135deg, #10b981, #059669); }
+.game3d-tag.offline { background: linear-gradient(135deg, #6b7280, #4b5563); }
 
 .game3d-opponent-stats {
   display: flex;
   justify-content: space-around;
-  font-size: 14px;
+  font-size: 13px;
   color: #e5e7eb;
-  border-top: 1px solid rgba(255,255,255,0.15);
-  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  padding-top: 4px;
   font-weight: 600;
 }
 
 .game3d-pts {
-  color: #34d399; /* Emerald 400 */
+  color: #34d399;
 }
 
+/* ─── Your Label ─── */
 .game3d-you-label {
   background: rgba(20, 25, 30, 0.85);
-  padding: 8px 20px;
-  border-radius: 20px;
+  padding: 6px 16px;
+  border-radius: 16px;
   color: #fff;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   white-space: nowrap;
 }
 
+/* ─── Trick Card Label ─── */
 .game3d-card-label {
   background: rgba(15, 20, 25, 0.85);
   color: #fff;
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 13px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
-  border: 1px solid rgba(255,255,255,0.25);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(8px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 /* ──────────────────────────────────────────────────────────────
-   Responsive Media Queries for Mobile/Landscape
+   MOBILE LANDSCAPE — complete override
+   Triggered by .mobile class added via JS when height < 500
    ────────────────────────────────────────────────────────────── */
 
-@media (max-width: 900px) and (orientation: landscape) {
-  .game3d-hud {
-    top: 5px;
-    left: 10px;
-    right: 10px;
-  }
-  
-  .game3d-hud-left {
-    gap: 4px;
-  }
-  
-  .game3d-badge {
-    padding: 2px 6px;
-    font-size: 9px;
-    border-radius: 8px;
-  }
-  
-  .game3d-close-btn {
-    width: 28px;
-    height: 28px;
-    font-size: 14px;
-  }
-  
-  .game3d-banners {
-    top: 35px;
-  }
-  
-  .game3d-hand {
-    padding-bottom: 2px;
-  }
-  
-  .game3d-hand-scroll .card-button {
-    width: clamp(50px, 12vh, 80px);
-    height: clamp(70px, 17vh, 112px);
-  }
-  
-  /* Shrink Opponent Overlays drastically */
-  .game3d-opponent {
-    min-width: 70px;
-    padding: 4px 6px;
-    border-radius: 6px;
-  }
-  .game3d-opponent-name {
-    font-size: 10px;
-    margin-bottom: 2px;
-  }
-  .game3d-tag {
-    font-size: 8px;
-    padding: 1px 4px;
-  }
-  .game3d-opponent-stats {
-    font-size: 10px;
-    padding-top: 2px;
-  }
-  
-  /* Shrink 'You' label */
-  .game3d-you-label {
-    padding: 4px 10px;
-    font-size: 11px;
-    border-radius: 10px;
-  }
+.game3d-fullscreen.mobile .game3d-hud {
+  top: 4px;
+  left: 8px;
+  right: 8px;
+}
+
+.game3d-fullscreen.mobile .game3d-hud-left {
+  gap: 4px;
+}
+
+.game3d-fullscreen.mobile .game3d-badge {
+  padding: 2px 6px;
+  font-size: 9px;
+  border-radius: 8px;
+  letter-spacing: 0.3px;
+}
+
+.game3d-fullscreen.mobile .game3d-close-btn {
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+}
+
+.game3d-fullscreen.mobile .game3d-banners {
+  top: 28px;
+}
+
+.game3d-fullscreen.mobile .game3d-info-banner {
+  font-size: 10px;
+  padding: 3px 12px;
+}
+
+/* Turn indicator — smaller + moved up so it doesn't overlap trick cards */
+.game3d-fullscreen.mobile .game3d-turn {
+  top: 46%;
+  padding: 5px 14px;
+  font-size: 11px;
+  border-radius: 14px;
+}
+
+.game3d-fullscreen.mobile .game3d-turn.mine {
+  font-size: 12px;
+  padding: 6px 16px;
+}
+
+/* Hand — much smaller cards, tight padding */
+.game3d-fullscreen.mobile .game3d-hand {
+  padding: 4px 0 2px;
+}
+
+.game3d-fullscreen.mobile .game3d-hand-scroll {
+  gap: 4px;
+  padding: 4px 8px 8px;
+}
+
+.game3d-fullscreen.mobile .game3d-hand-scroll .card-button {
+  width: clamp(36px, 10vh, 58px);
+  height: clamp(50px, 14vh, 81px);
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.game3d-fullscreen.mobile .game3d-hand-scroll .card-button:hover:not(:disabled) {
+  transform: translateY(-10px) scale(1.08);
+}
+
+.game3d-fullscreen.mobile .game3d-hand-scroll .card-button:disabled {
+  transform: translateY(6px);
+}
+
+/* Opponent overlays — shrink everything */
+.game3d-fullscreen.mobile .game3d-opponent {
+  min-width: 60px;
+  max-width: 85px;
+  padding: 3px 5px;
+  border-radius: 6px;
+}
+
+.game3d-fullscreen.mobile .game3d-opponent-name {
+  font-size: 9px;
+  margin-bottom: 1px;
+  max-width: 75px;
+}
+
+.game3d-fullscreen.mobile .game3d-opponent-tags {
+  gap: 2px;
+  margin-bottom: 2px;
+}
+
+.game3d-fullscreen.mobile .game3d-tag {
+  font-size: 7px;
+  padding: 1px 3px;
+  border-radius: 4px;
+}
+
+.game3d-fullscreen.mobile .game3d-opponent-stats {
+  font-size: 9px;
+  padding-top: 2px;
+}
+
+/* Your label — tiny on mobile */
+.game3d-fullscreen.mobile .game3d-you-label {
+  padding: 3px 8px;
+  font-size: 9px;
+  border-radius: 8px;
+}
+
+/* Card labels on trick cards — tiny */
+.game3d-fullscreen.mobile .game3d-card-label {
+  font-size: 8px;
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+/* Trick winner */
+.game3d-fullscreen.mobile .game3d-trick-winner h2 {
+  font-size: 22px;
+}
+
+.game3d-fullscreen.mobile .game3d-trick-winner p {
+  font-size: 18px;
 }

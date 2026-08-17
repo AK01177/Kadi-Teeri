@@ -32,37 +32,29 @@ function InvalidateOnMount() {
 }
 
 /* ── Helper: Responsive Camera ── */
-function CameraSetup() {
-  const { size, invalidate } = useThree();
-  
-  // Re-render when size changes
-  useEffect(() => { invalidate(); }, [size, invalidate]);
+function CameraSetup({ isMobile }: { isMobile: boolean }) {
+  const { invalidate } = useThree();
+  useEffect(() => { invalidate(); }, [isMobile, invalidate]);
 
-  const aspect = size.width / size.height;
-  // Detect mobile landscape (wide but short)
-  const isMobileLandscape = aspect > 1.3 && size.height < 500;
-  
-  // On mobile landscape, we actually want to be CLOSER to the table so it fills the screen,
-  // because the horizontal FOV is already massive.
-  const fov = isMobileLandscape ? 50 : 60;
-  const position: [number, number, number] = isMobileLandscape 
-    ? [0, 4.5, 4.5] // Closer in
+  // On mobile landscape: bring camera closer, look more steeply down
+  // so the table fills the vertical space. Narrower FOV keeps things tight.
+  const fov = isMobile ? 48 : 55;
+  const position: [number, number, number] = isMobile
+    ? [0, 5.0, 4.0]
     : [0, 5.5, 5.5];
-  const rotation: [number, number, number] = isMobileLandscape 
-    ? [-Math.PI / 4, 0, 0] // Slightly steeper look-down
-    : [-Math.PI / 4 - 0.05, 0, 0];
+  const rotation: [number, number, number] = isMobile
+    ? [-Math.PI / 3.5, 0, 0]   // ~51° down — steeper to see more table
+    : [-Math.PI / 4 - 0.05, 0, 0]; // ~46° down
 
   return (
-    <PerspectiveCamera 
-      makeDefault 
-      position={position} 
-      rotation={rotation} 
-      fov={fov} 
+    <PerspectiveCamera
+      makeDefault
+      position={position}
+      rotation={rotation}
+      fov={fov}
     />
   );
 }
-
-
 
 export function GameTable3D({
   game,
@@ -77,6 +69,19 @@ export function GameTable3D({
 }: GameTable3DProps) {
   const n = game.players.length;
   const isCompact = n >= 6;
+
+  /* ── Detect mobile landscape once, use everywhere ── */
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      setIsMobile(w > h && h < 500);
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -108,20 +113,15 @@ export function GameTable3D({
     if (!tableNodes.Chair_Table_Mat_0) return null;
     const orig = (tableNodes.Chair_Table_Mat_0 as THREE.Mesh).geometry;
     const cloned = orig.clone();
-    cloned.center(); // Center at origin. Original height is 359 units.
-    // We want the diameter to be ~9 units (matches old 4.5 radius).
-    // The original X/Y size is ~284.5. Scale = 9 / 284.5 ≈ 0.0316
+    cloned.center();
     cloned.scale(0.0316, 0.0316, 0.0316);
-    // Rotate so it's Y-up
     cloned.rotateX(-Math.PI / 2);
-    // Add a slight decorative rotation for the table legs
     cloned.rotateY(Math.PI / 8);
     return cloned;
   }, [tableNodes]);
 
   /* ═══════════════════════════════════════════
      Opponent positions — 180° arc on far side
-     Dynamic radius and wider arc for many players
      ═══════════════════════════════════════════ */
   const otherPlayers = useMemo(() => {
     const arr: {
@@ -132,9 +132,10 @@ export function GameTable3D({
     }[] = [];
     const numOthers = n - 1;
 
-    // Dynamic radius: grows with player count to prevent overlap. Increased to spread out more.
-    const radius = n <= 4 ? 3.7 : 3.7 + (n - 4) * 0.45;
-    // Wider arc for more players
+    // On mobile, push opponents outward slightly more so their labels
+    // don't overlap the trick cards in the centre
+    const baseRadius = isMobile ? 4.0 : 3.7;
+    const radius = n <= 4 ? baseRadius : baseRadius + (n - 4) * 0.45;
     const startA = n <= 4 ? 0.82 * Math.PI : 0.92 * Math.PI;
     const endA = n <= 4 ? 0.18 * Math.PI : 0.08 * Math.PI;
 
@@ -142,18 +143,17 @@ export function GameTable3D({
       const seatIndex = (mySeat + i) % n;
       let angle: number;
       if (numOthers === 1) {
-        angle = Math.PI / 2; // directly across
+        angle = Math.PI / 2;
       } else {
         angle = startA + ((i - 1) / (numOthers - 1)) * (endA - startA);
       }
       const px = Math.cos(angle) * radius;
-      // Stagger Z slightly per opponent so overlays don't align
       const zStagger = numOthers > 4 ? (i % 2 === 0 ? 0.25 : -0.25) : 0;
       const pz = -Math.sin(angle) * radius - 0.5 + zStagger;
       arr.push({ seatIndex, player: game.players[seatIndex], px, pz });
     }
     return arr;
-  }, [game.players, mySeat, n]);
+  }, [game.players, mySeat, n, isMobile]);
 
   /* ═══════════════════════════════════════════
      Trick card layout — spread in the centre
@@ -164,8 +164,10 @@ export function GameTable3D({
     const count = cardsPlayed.length;
     if (count === 0) return [];
 
-    // Tighter spacing since cards are reduced in size
-    const spacing = count > 5 ? 0.65 : 0.9;
+    // On mobile, tighter spacing so cards fit the smaller visible area
+    const spacing = isMobile
+      ? (count > 5 ? 0.45 : 0.6)
+      : (count > 5 ? 0.65 : 0.9);
     const totalWidth = (count - 1) * spacing;
     const startX = -totalWidth / 2;
 
@@ -173,16 +175,16 @@ export function GameTable3D({
       play,
       position: [
         startX + i * spacing,
-        0.05 + i * 0.02, // slightly raised base Y to prevent sinking
-        -0.5 + (i - (count - 1) / 2) * 0.12,
+        0.05 + i * 0.02,
+        -0.5 + (i - (count - 1) / 2) * 0.08,
       ] as [number, number, number],
       rotation: [
-        -Math.PI / 2 + 0.05, // Flatter, less extreme upward tilt
+        -Math.PI / 2 + 0.05,
         0,
-        (i - (count - 1) / 2) * 0.06, // slight fan
+        (i - (count - 1) / 2) * 0.06,
       ] as [number, number, number],
     }));
-  }, [cardsPlayed]);
+  }, [cardsPlayed, isMobile]);
 
   /* ═══════════════════════════════════════════
      Legal card set for hand rendering
@@ -230,11 +232,25 @@ export function GameTable3D({
   const myCardCount = game.hand_sizes?.[mySeat] ?? hand.length;
   const myPoints = game.captured_points?.[mySeat] ?? 0;
 
+  /* ── Responsive 3D scale factors ── */
+  const trickCardScale = isMobile
+    ? (isCompact ? 0.35 : 0.45)
+    : (isCompact ? 0.6 : 0.75);
+  const opponentCardScale = isMobile
+    ? (isCompact ? 0.18 : 0.22)
+    : (isCompact ? 0.28 : 0.38);
+  // How far below each trick-card to place its label
+  const trickLabelOffset = isMobile ? 0.6 : 0.95;
+  // Opponent overlay Y-height above table
+  const opponentLabelY = isMobile ? 0.3 : 0.6;
+  // Your label Z-position (further = closer to you, below table centre)
+  const youLabelZ = isMobile ? 3.5 : 3.2;
+
   /* ═══════════════════════════════════════════════════════════════
      RENDER
      ═══════════════════════════════════════════════════════════════ */
   return (
-    <div className="game3d-fullscreen">
+    <div className={`game3d-fullscreen${isMobile ? " mobile" : ""}`}>
       {/* ════════════════════════ 3D CANVAS ════════════════════════ */}
       <Canvas
         shadows
@@ -244,16 +260,15 @@ export function GameTable3D({
         gl={{ antialias: true, powerPreference: "default" }}
         style={{ position: "absolute", inset: 0 }}
       >
-        {/* Responsive Camera that adjusts automatically for mobile landscape */}
-        <CameraSetup />
+        <CameraSetup isMobile={isMobile} />
         <InvalidateOnMount />
 
-        {/* ── Lighting: bright for vivid cards, with shadows ── */}
+        {/* ── Lighting ── */}
         <ambientLight intensity={1.1} />
-        <directionalLight 
-          position={[3, 8, 5]} 
-          intensity={0.9} 
-          castShadow 
+        <directionalLight
+          position={[3, 8, 5]}
+          intensity={0.9}
+          castShadow
           shadow-mapSize={[1024, 1024]}
           shadow-camera-left={-8}
           shadow-camera-right={8}
@@ -269,7 +284,6 @@ export function GameTable3D({
             castShadow
             geometry={tableGeometry}
             material={tableMaterials.Table_Mat}
-            // Lowered slightly to Y = -5.85 to ensure cards at Y=0 float comfortably above it
             position={[0, -5.85, -0.5]}
           />
         )}
@@ -286,14 +300,14 @@ export function GameTable3D({
                   position={position}
                   rotation={rotation}
                   index={i}
-                  scale={isCompact ? 0.6 : 0.75}
+                  scale={trickCardScale}
                 />
                 {/* Player name label below the card */}
                 <Html
                   position={[
                     position[0],
                     0.06,
-                    position[2] + 0.95,
+                    position[2] + trickLabelOffset,
                   ]}
                   center
                   sprite
@@ -326,7 +340,7 @@ export function GameTable3D({
                     ]}
                     index={0}
                     faceDown
-                    scale={isCompact ? 0.28 : 0.38}
+                    scale={opponentCardScale}
                   />
                 </Suspense>
               )}
@@ -349,17 +363,15 @@ export function GameTable3D({
 
             {/* Opponent info overlay */}
             <Html
-              position={[p.px, 0.6, p.pz - (isCompact ? 0.3 : 0.5)]}
+              position={[p.px, opponentLabelY, p.pz - (isCompact ? 0.3 : 0.5)]}
               center
               sprite
               style={{ pointerEvents: "none" }}
             >
               <div
-                className={`game3d-opponent${
-                  isCompact ? " compact" : ""
-                }${
-                  game.turn_seat === p.seatIndex ? " active" : ""
-                }`}
+                className={`game3d-opponent${isCompact ? " compact" : ""
+                  }${game.turn_seat === p.seatIndex ? " active" : ""
+                  }`}
               >
                 <div className="game3d-opponent-name">
                   {p.player?.name || "Empty"}
@@ -412,7 +424,7 @@ export function GameTable3D({
 
         {/* ═════════════ YOUR SEAT LABEL ═════════════ */}
         <Html
-          position={[0, 0.1, 3.2]}
+          position={[0, 0.1, youLabelZ]}
           center
           sprite
           style={{ pointerEvents: "none" }}
@@ -439,8 +451,8 @@ export function GameTable3D({
             Trick {game.trick_number}/
             {game.hand_sizes
               ? Math.max(...Object.values(game.hand_sizes)) +
-                game.trick_number -
-                1
+              game.trick_number -
+              1
               : "?"}
           </span>
           {!game.is_solo && game.bherus.length > 0 && (
@@ -545,4 +557,3 @@ export function GameTable3D({
     </div>
   );
 }
-
