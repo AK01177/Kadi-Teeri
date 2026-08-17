@@ -1,6 +1,6 @@
 import { Suspense, useMemo, useCallback, useState, useEffect } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
-import { PerspectiveCamera, Html } from "@react-three/drei";
+import { PerspectiveCamera, Html, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import type { GameState, Card as CardType } from "../types/game";
 import { SUIT_SYMBOLS, SUIT_NAMES } from "../types/game";
@@ -30,108 +30,7 @@ function InvalidateOnMount() {
   return null;
 }
 
-/* ── Procedural felt texture ── */
-function createFeltTexture(): THREE.CanvasTexture {
-  const size = 512;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
 
-  // Base felt green
-  ctx.fillStyle = "#1a6b42";
-  ctx.fillRect(0, 0, size, size);
-
-  // Felt grain — many tiny dots with slight color variation
-  for (let i = 0; i < 40000; i++) {
-    const x = Math.random() * size;
-    const y = Math.random() * size;
-    const brightness = 20 + Math.random() * 30;
-    const green = 90 + Math.random() * 40;
-    ctx.fillStyle = `rgba(${brightness}, ${green}, ${brightness + 20}, ${0.08 + Math.random() * 0.12})`;
-    ctx.fillRect(x, y, 1, 1);
-  }
-
-  // Subtle fiber streaks
-  ctx.strokeStyle = "rgba(30, 120, 70, 0.06)";
-  ctx.lineWidth = 0.5;
-  for (let i = 0; i < 200; i++) {
-    const x = Math.random() * size;
-    const y = Math.random() * size;
-    const len = 10 + Math.random() * 40;
-    const angle = Math.random() * Math.PI;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len);
-    ctx.stroke();
-  }
-
-  // Vignette/wear at center
-  const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  grad.addColorStop(0, "rgba(25, 100, 60, 0.15)");
-  grad.addColorStop(0.6, "rgba(0, 0, 0, 0)");
-  grad.addColorStop(1, "rgba(0, 0, 0, 0.1)");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, size, size);
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(3, 3);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
-}
-
-/* ── Procedural wood grain texture ── */
-function createWoodTexture(): THREE.CanvasTexture {
-  const size = 512;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-
-  // Base dark wood
-  ctx.fillStyle = "#5a2d0c";
-  ctx.fillRect(0, 0, size, size);
-
-  // Wood grain lines — horizontal streaks with color variation
-  for (let y = 0; y < size; y++) {
-    const wave = Math.sin(y * 0.04) * 8 + Math.sin(y * 0.11) * 4;
-    const brightness = 70 + Math.sin(y * 0.08 + wave * 0.1) * 25;
-    const r = brightness + 10;
-    const g = brightness * 0.5;
-    const b = brightness * 0.15;
-    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.15 + Math.random() * 0.1})`;
-    ctx.fillRect(0, y, size, 1);
-  }
-
-  // Knots — dark circles
-  for (let i = 0; i < 5; i++) {
-    const kx = Math.random() * size;
-    const ky = Math.random() * size;
-    const kr = 8 + Math.random() * 15;
-    const kGrad = ctx.createRadialGradient(kx, ky, 0, kx, ky, kr);
-    kGrad.addColorStop(0, "rgba(30, 12, 0, 0.5)");
-    kGrad.addColorStop(1, "rgba(30, 12, 0, 0)");
-    ctx.fillStyle = kGrad;
-    ctx.beginPath();
-    ctx.arc(kx, ky, kr, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Subtle noise for roughness
-  for (let i = 0; i < 15000; i++) {
-    const x = Math.random() * size;
-    const y = Math.random() * size;
-    ctx.fillStyle = `rgba(0, 0, 0, ${Math.random() * 0.08})`;
-    ctx.fillRect(x, y, 1, 1);
-  }
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(4, 1);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
-}
 
 export function GameTable3D({
   game,
@@ -171,9 +70,22 @@ export function GameTable3D({
     };
   }, []);
 
-  /* ── Procedural textures (created once) ── */
-  const feltTexture = useMemo(() => createFeltTexture(), []);
-  const woodTexture = useMemo(() => createWoodTexture(), []);
+  const { nodes: tableNodes, materials: tableMaterials } = useGLTF("/models/table.glb") as any;
+
+  const tableGeometry = useMemo(() => {
+    if (!tableNodes.Chair_Table_Mat_0) return null;
+    const orig = (tableNodes.Chair_Table_Mat_0 as THREE.Mesh).geometry;
+    const cloned = orig.clone();
+    cloned.center(); // Center at origin. Original height is 359 units.
+    // We want the diameter to be ~9 units (matches old 4.5 radius).
+    // The original X/Y size is ~284.5. Scale = 9 / 284.5 ≈ 0.0316
+    cloned.scale(0.0316, 0.0316, 0.0316);
+    // Rotate so it's Y-up
+    cloned.rotateX(-Math.PI / 2);
+    // Add a slight decorative rotation for the table legs
+    cloned.rotateY(Math.PI / 8);
+    return cloned;
+  }, [tableNodes]);
 
   /* ═══════════════════════════════════════════
      Opponent positions — 180° arc on far side
@@ -329,92 +241,17 @@ export function GameTable3D({
         <directionalLight position={[-3, 6, -3]} intensity={0.4} />
 
         {/* ═════════════ TABLE ═════════════ */}
-
-        {/* Felt surface — with procedural texture */}
-        <mesh receiveShadow position={[0, -0.08, -0.5]}>
-          <cylinderGeometry args={[4.5, 4.5, 0.16, 64]} />
-          <meshStandardMaterial
-            map={feltTexture}
-            color="#1a6b42"
-            roughness={0.85}
+        {tableGeometry && (
+          <mesh
+            receiveShadow
+            castShadow
+            geometry={tableGeometry}
+            material={tableMaterials.Table_Mat}
+            // Since the table is centered and its scaled height is ~11.35,
+            // placing it at Y = -5.675 positions the table top exactly at Y = 0.
+            position={[0, -5.675, -0.5]}
           />
-        </mesh>
-
-        {/* Wooden rim — with procedural wood grain */}
-        <mesh receiveShadow position={[0, -0.12, -0.5]}>
-          <cylinderGeometry args={[4.8, 4.8, 0.24, 64]} />
-          <meshStandardMaterial
-            map={woodTexture}
-            color="#5a2d0c"
-            roughness={0.55}
-            metalness={0.05}
-          />
-        </mesh>
-
-        {/* Rim highlight — top edge bevel */}
-        <mesh position={[0, 0.01, -0.5]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[4.45, 4.55, 64]} />
-          <meshStandardMaterial
-            color="#7a4420"
-            roughness={0.4}
-            metalness={0.1}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-
-        {/* Inner decorative ring */}
-        <mesh
-          position={[0, 0.005, -0.5]}
-          rotation={[-Math.PI / 2, 0, 0]}
-        >
-          <ringGeometry args={[3.5, 3.9, 64]} />
-          <meshStandardMaterial
-            color="#14573a"
-            roughness={0.9}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-
-        {/* Centre circle */}
-        <mesh
-          position={[0, 0.006, -0.5]}
-          rotation={[-Math.PI / 2, 0, 0]}
-        >
-          <circleGeometry args={[0.6, 32]} />
-          <meshStandardMaterial
-            color="#166340"
-            roughness={0.8}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-
-        {/* Outer glow ring on the felt edge — dark vignette */}
-        <mesh
-          position={[0, 0.004, -0.5]}
-          rotation={[-Math.PI / 2, 0, 0]}
-        >
-          <ringGeometry args={[4.0, 4.48, 64]} />
-          <meshBasicMaterial
-            color="#0a2e1e"
-            side={THREE.DoubleSide}
-            transparent
-            opacity={0.35}
-          />
-        </mesh>
-
-        {/* Inner shadow ring for depth */}
-        <mesh
-          position={[0, 0.003, -0.5]}
-          rotation={[-Math.PI / 2, 0, 0]}
-        >
-          <ringGeometry args={[3.85, 4.05, 64]} />
-          <meshBasicMaterial
-            color="#000000"
-            side={THREE.DoubleSide}
-            transparent
-            opacity={0.12}
-          />
-        </mesh>
+        )}
 
         {/* ═════════════ TRICK CARDS ═════════════ */}
         <Suspense fallback={null}>

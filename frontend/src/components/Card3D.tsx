@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useState } from "react";
-import { useTexture } from "@react-three/drei";
 import { useSpring, a } from "@react-spring/three";
 import { useThree } from "@react-three/fiber";
+import { useGLTF } from "@react-three/drei";
 import type { Card as CardType } from "../types/game";
 import * as THREE from "three";
 
@@ -16,25 +16,28 @@ interface Card3DProps {
   scale?: number;
 }
 
-const SUIT_MAP: Record<string, string> = {
-  C: "clubs",
-  D: "diamonds",
-  H: "hearts",
+const SUIT_PREFIX_MAP: Record<string, string> = {
   S: "spades",
+  H: "hearts",
+  D: "diamonds",
+  C: "clubs",
 };
 
-/* ── Shared geometry: real card with thickness ── */
-const CARD_W = 1;
-const CARD_H = 1.4;
-const CARD_D = 0.025;
-const CARD_BOX = new THREE.BoxGeometry(CARD_W, CARD_H, CARD_D);
-
-/* ── Shared edge material (cream-coloured card stock) ── */
-const EDGE_MAT = new THREE.MeshStandardMaterial({
-  color: "#f0e8d0",
-  roughness: 0.6,
-  metalness: 0,
-});
+const RANK_NUM_MAP: Record<string, string> = {
+  "A": "01",
+  "2": "02",
+  "3": "03",
+  "4": "04",
+  "5": "05",
+  "6": "06",
+  "7": "07",
+  "8": "08",
+  "9": "09",
+  "10": "10",
+  "J": "11",
+  "Q": "12",
+  "K": "13",
+};
 
 export function Card3D({
   card,
@@ -44,11 +47,7 @@ export function Card3D({
   faceDown = false,
   scale: targetScale = 1,
 }: Card3DProps) {
-  const suitName = SUIT_MAP[card.suit] || "spades";
-  const faceSrc = `/CardsPNG/${suitName}_${card.rank}.png`;
-  const backSrc = `/CardsPNG/back_light.png`;
-
-  const [faceTex, backTex] = useTexture([faceSrc, backSrc]);
+  const { nodes, materials } = useGLTF("/models/cards.glb");
   const invalidate = useThree((s) => s.invalidate);
 
   const [dealt, setDealt] = useState(false);
@@ -61,55 +60,37 @@ export function Card3D({
     return () => clearTimeout(t);
   }, [index, invalidate]);
 
-  /* ── Ensure vivid colours via sRGB colour space ── */
-  useMemo(() => {
-    faceTex.colorSpace = THREE.SRGBColorSpace;
-    backTex.colorSpace = THREE.SRGBColorSpace;
-    faceTex.minFilter = THREE.LinearFilter;
-    faceTex.magFilter = THREE.LinearFilter;
-    backTex.minFilter = THREE.LinearFilter;
-    backTex.magFilter = THREE.LinearFilter;
-    faceTex.needsUpdate = true;
-    backTex.needsUpdate = true;
-  }, [faceTex, backTex]);
+  const nodeName = `${SUIT_PREFIX_MAP[card.suit]}${RANK_NUM_MAP[card.rank]}_playingCards_Mat_0`;
+  const safeNodeName = nodes[nodeName] ? nodeName : "spades01_playingCards_Mat_0";
 
-  /*
-   * Materials order for BoxGeometry:
-   *   [0]+x  [1]-x  [2]+y  [3]-y  [4]+z(front)  [5]-z(back)
-   *
-   * When laid flat with rotation [-PI/2, 0, 0]:
-   *   +z → upward (visible to camera)
-   *   -z → downward (hidden against table)
-   *
-   * faceDown=false → +z shows card face (faceTex)
-   * faceDown=true  → +z shows card back (backTex)
-   */
-  const materials = useMemo(() => {
-    const topMap = faceDown ? backTex : faceTex;
-    const botMap = faceDown ? faceTex : backTex;
-
-    const topMat = new THREE.MeshStandardMaterial({
-      map: topMap,
-      roughness: 0.3,
-      metalness: 0,
-    });
-    const botMat = new THREE.MeshStandardMaterial({
-      map: botMap,
-      roughness: 0.4,
-      metalness: 0,
-    });
-
-    return [EDGE_MAT, EDGE_MAT, EDGE_MAT, EDGE_MAT, topMat, botMat];
-  }, [faceTex, backTex, faceDown]);
+  const geometry = useMemo(() => {
+    const origGeom = (nodes[safeNodeName] as THREE.Mesh).geometry;
+    const cloned = origGeom.clone();
+    cloned.center();
+    // Scale 0.125 converts the 8x12 unit model to exactly 1.0 x 1.5 units
+    // which perfectly matches our old 1.0 x 1.4 size.
+    cloned.scale(0.125, 0.125, 0.125);
+    // Rotate to match our original orientation so it lays flat on the table when rotation is [-PI/2, 0, 0]
+    cloned.rotateX(Math.PI / 2);
+    return cloned;
+  }, [nodes, safeNodeName]);
 
   /* ── Spring: deal-in animation ── */
+  // If faceDown is true, we flip the card over by adding PI to the Y-axis rotation
+  // This will show the back of the card.
+  const finalRotation = [
+    rotation[0],
+    rotation[1] + (faceDown ? Math.PI : 0),
+    rotation[2],
+  ] as [number, number, number];
+
   const spring = useSpring({
     pos: dealt
       ? position
       : ([position[0], position[1] - 2, position[2] + 1.5] as [number, number, number]),
     rot: dealt
-      ? rotation
-      : ([rotation[0] - 0.4, rotation[1], rotation[2]] as [number, number, number]),
+      ? finalRotation
+      : ([finalRotation[0] - 0.4, finalRotation[1], finalRotation[2]] as [number, number, number]),
     scl: dealt ? targetScale : 0.12,
     config: { mass: 0.65, tension: 190, friction: 22 },
     onChange: () => invalidate(),
@@ -119,11 +100,13 @@ export function Card3D({
     <a.mesh
       castShadow
       receiveShadow
-      geometry={CARD_BOX}
-      material={materials}
+      geometry={geometry}
+      material={materials.playingCards_Mat}
       position={spring.pos as any}
       rotation={spring.rot as any}
       scale={spring.scl as any}
     />
   );
 }
+
+useGLTF.preload("/models/cards.glb");
