@@ -42,13 +42,14 @@ function CameraSetup() {
   // Detect mobile landscape (wide but short)
   const isMobileLandscape = aspect > 1.3 && size.height < 500;
   
-  // Pull camera back, up, and widen FOV significantly if vertical space is limited
-  const fov = isMobileLandscape ? 72 : 60;
+  // On mobile landscape, we actually want to be CLOSER to the table so it fills the screen,
+  // because the horizontal FOV is already massive.
+  const fov = isMobileLandscape ? 50 : 60;
   const position: [number, number, number] = isMobileLandscape 
-    ? [0, 6.5, 6.5] 
+    ? [0, 4.5, 4.5] // Closer in
     : [0, 5.5, 5.5];
   const rotation: [number, number, number] = isMobileLandscape 
-    ? [-Math.PI / 4 - 0.1, 0, 0] 
+    ? [-Math.PI / 4, 0, 0] // Slightly steeper look-down
     : [-Math.PI / 4 - 0.05, 0, 0];
 
   return (

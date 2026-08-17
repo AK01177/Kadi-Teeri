@@ -367,6 +367,7 @@
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  white-space: nowrap;
 }
 
 .game3d-card-label {
@@ -386,34 +387,65 @@
    Responsive Media Queries for Mobile/Landscape
    ────────────────────────────────────────────────────────────── */
 
-@media (max-width: 768px) and (orientation: landscape) {
+@media (max-width: 900px) and (orientation: landscape) {
   .game3d-hud {
-    top: 10px;
-    left: 15px;
-    right: 15px;
+    top: 5px;
+    left: 10px;
+    right: 10px;
+  }
+  
+  .game3d-hud-left {
+    gap: 4px;
   }
   
   .game3d-badge {
-    padding: 4px 10px;
-    font-size: 11px;
+    padding: 2px 6px;
+    font-size: 9px;
+    border-radius: 8px;
   }
   
   .game3d-close-btn {
-    width: 36px;
-    height: 36px;
-    font-size: 16px;
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
   }
   
   .game3d-banners {
-    top: 50px;
+    top: 35px;
   }
   
   .game3d-hand {
-    padding-bottom: 5px;
+    padding-bottom: 2px;
   }
   
   .game3d-hand-scroll .card-button {
-    width: clamp(60px, 12vh, 90px);
-    height: clamp(84px, 17vh, 126px);
+    width: clamp(50px, 12vh, 80px);
+    height: clamp(70px, 17vh, 112px);
+  }
+  
+  /* Shrink Opponent Overlays drastically */
+  .game3d-opponent {
+    min-width: 70px;
+    padding: 4px 6px;
+    border-radius: 6px;
+  }
+  .game3d-opponent-name {
+    font-size: 10px;
+    margin-bottom: 2px;
+  }
+  .game3d-tag {
+    font-size: 8px;
+    padding: 1px 4px;
+  }
+  .game3d-opponent-stats {
+    font-size: 10px;
+    padding-top: 2px;
+  }
+  
+  /* Shrink 'You' label */
+  .game3d-you-label {
+    padding: 4px 10px;
+    font-size: 11px;
+    border-radius: 10px;
   }
 }
