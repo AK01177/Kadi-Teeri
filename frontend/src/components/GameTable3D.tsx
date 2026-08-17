@@ -6,6 +6,7 @@ import type { GameState, Card as CardType } from "../types/game";
 import { SUIT_SYMBOLS, SUIT_NAMES } from "../types/game";
 import { Card3D } from "./Card3D";
 import { Card } from "./Card";
+import "./GameTable3D.css";
 
 /* ──────────────────────────────────────────────────────────────
    GameTable3D — Fullscreen first-person 3D card table
@@ -28,6 +29,36 @@ function InvalidateOnMount() {
   const invalidate = useThree((s) => s.invalidate);
   invalidate();
   return null;
+}
+
+/* ── Helper: Responsive Camera ── */
+function CameraSetup() {
+  const { size, invalidate } = useThree();
+  
+  // Re-render when size changes
+  useEffect(() => { invalidate(); }, [size, invalidate]);
+
+  const aspect = size.width / size.height;
+  // Detect mobile landscape (wide but short)
+  const isMobileLandscape = aspect > 1.3 && size.height < 500;
+  
+  // Pull camera back, up, and widen FOV significantly if vertical space is limited
+  const fov = isMobileLandscape ? 72 : 60;
+  const position: [number, number, number] = isMobileLandscape 
+    ? [0, 6.5, 6.5] 
+    : [0, 5.5, 5.5];
+  const rotation: [number, number, number] = isMobileLandscape 
+    ? [-Math.PI / 4 - 0.1, 0, 0] 
+    : [-Math.PI / 4 - 0.05, 0, 0];
+
+  return (
+    <PerspectiveCamera 
+      makeDefault 
+      position={position} 
+      rotation={rotation} 
+      fov={fov} 
+    />
+  );
 }
 
 
@@ -100,8 +131,8 @@ export function GameTable3D({
     }[] = [];
     const numOthers = n - 1;
 
-    // Dynamic radius: grows with player count to prevent overlap
-    const radius = n <= 4 ? 3.2 : 3.2 + (n - 4) * 0.35;
+    // Dynamic radius: grows with player count to prevent overlap. Increased to spread out more.
+    const radius = n <= 4 ? 3.7 : 3.7 + (n - 4) * 0.45;
     // Wider arc for more players
     const startA = n <= 4 ? 0.82 * Math.PI : 0.92 * Math.PI;
     const endA = n <= 4 ? 0.18 * Math.PI : 0.08 * Math.PI;
@@ -132,8 +163,8 @@ export function GameTable3D({
     const count = cardsPlayed.length;
     if (count === 0) return [];
 
-    // Tighter spacing for many cards
-    const spacing = count > 5 ? 0.95 : 1.35;
+    // Tighter spacing since cards are reduced in size
+    const spacing = count > 5 ? 0.65 : 0.9;
     const totalWidth = (count - 1) * spacing;
     const startX = -totalWidth / 2;
 
@@ -141,7 +172,7 @@ export function GameTable3D({
       play,
       position: [
         startX + i * spacing,
-        0.02 + i * 0.02,
+        0.05 + i * 0.02, // slightly raised base Y to prevent sinking
         -0.5 + (i - (count - 1) / 2) * 0.12,
       ] as [number, number, number],
       rotation: [
@@ -212,18 +243,8 @@ export function GameTable3D({
         gl={{ antialias: true, powerPreference: "default" }}
         style={{ position: "absolute", inset: 0 }}
       >
-        {/*
-          Camera: first-person seated view
-          Position [0, 5, 4.5] — elevated above our seat
-          Rotation [-PI/4, 0, 0] — looking 45° down at the table centre
-          FOV 55 — wide enough to see the full table in landscape
-        */}
-        <PerspectiveCamera
-          makeDefault
-          position={[0, 5, 4.5]}
-          rotation={[-Math.PI / 4, 0, 0]}
-          fov={55}
-        />
+        {/* Responsive Camera that adjusts automatically for mobile landscape */}
+        <CameraSetup />
         <InvalidateOnMount />
 
         {/* ── Lighting: bright for vivid cards, with shadows ── */}
@@ -247,9 +268,8 @@ export function GameTable3D({
             castShadow
             geometry={tableGeometry}
             material={tableMaterials.Table_Mat}
-            // Since the table is centered and its scaled height is ~11.35,
-            // placing it at Y = -5.675 positions the table top exactly at Y = 0.
-            position={[0, -5.675, -0.5]}
+            // Lowered slightly to Y = -5.85 to ensure cards at Y=0 float comfortably above it
+            position={[0, -5.85, -0.5]}
           />
         )}
 
@@ -265,7 +285,7 @@ export function GameTable3D({
                   position={position}
                   rotation={rotation}
                   index={i}
-                  scale={isCompact ? 0.9 : 1.15}
+                  scale={isCompact ? 0.6 : 0.75}
                 />
                 {/* Player name label below the card */}
                 <Html
@@ -305,7 +325,7 @@ export function GameTable3D({
                     ]}
                     index={0}
                     faceDown
-                    scale={isCompact ? 0.4 : 0.55}
+                    scale={isCompact ? 0.28 : 0.38}
                   />
                 </Suspense>
               )}

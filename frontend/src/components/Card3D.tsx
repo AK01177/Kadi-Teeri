@@ -48,7 +48,7 @@ export function Card3D({
   scale: targetScale = 1,
 }: Card3DProps) {
   const { nodes, materials } = useGLTF("/models/cards.glb");
-  const invalidate = useThree((s) => s.invalidate);
+  const { invalidate, gl } = useThree();
 
   const [dealt, setDealt] = useState(false);
 
@@ -59,6 +59,15 @@ export function Card3D({
     }, 60 + index * 50);
     return () => clearTimeout(t);
   }, [index, invalidate]);
+
+  // Improve texture resolution/clarity at grazing angles
+  useEffect(() => {
+    if (materials.playingCards_Mat && (materials.playingCards_Mat as THREE.MeshStandardMaterial).map) {
+      const map = (materials.playingCards_Mat as THREE.MeshStandardMaterial).map!;
+      map.anisotropy = gl.capabilities.getMaxAnisotropy();
+      map.needsUpdate = true;
+    }
+  }, [materials, gl]);
 
   const nodeName = `${SUIT_PREFIX_MAP[card.suit]}${RANK_NUM_MAP[card.rank]}_playingCards_Mat_0`;
   const safeNodeName = nodes[nodeName] ? nodeName : "spades01_playingCards_Mat_0";
