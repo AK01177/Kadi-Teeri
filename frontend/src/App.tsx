@@ -3,14 +3,14 @@ import { useGameStore } from "./store/gameStore";
 import { useWebSocket } from "./hooks/useWebSocket";
 import type { ServerMessage } from "./types/game";
 
-import { HomePage } from "./features/home";
-import { LobbyPage } from "./features/lobby";
-import { BiddingPage } from "./features/bidding";
-import { TrumpSelectPage } from "./features/trump";
-import { TrumpChallengePage } from "./features/trump";
-import { BheruSelectPage } from "./features/bheru";
-import { PlayingPage } from "./features/playing";
-import { RoundEndPage } from "./features/round-end";
+import { HomePage } from "./features/HomePage";
+import { LobbyPage } from "./features/LobbyPage";
+import { BiddingPage } from "./features/BiddingPage";
+import { TrumpSelectPage } from "./features/trump/TrumpSelectPage";
+import { TrumpChallengePage } from "./features/trump/TrumpChallengePage";
+import { BheruSelectPage } from "./features/BheruSelectPage";
+import { PlayingPage } from "./features/PlayingPage";
+import { RoundEndPage } from "./features/RoundEndPage";
 
 const WS_BASE =
   import.meta.env.VITE_WS_URL ||

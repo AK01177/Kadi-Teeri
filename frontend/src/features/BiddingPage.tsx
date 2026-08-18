@@ -1,7 +1,7 @@
-import { useGameStore } from "../../store/gameStore";
-import { GameTable } from "../../components/table/GameTable";
-import { Hand } from "../../components/player/Hand";
-import { ActivityLog } from "../../components/ui/ActivityLog";
+import { useGameStore } from "../store/gameStore";
+import { GameTable } from "../components/table/GameTable";
+import { Hand } from "../components/player/Hand";
+import { ActivityLog } from "../components/ui/ActivityLog";
 
 export function BiddingPage() {
   const { gameState, hand, seat, pendingBid, setPendingBid, sendFn } =

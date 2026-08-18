@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useGameStore } from "../../store/gameStore";
-import { HowToPlayModal } from "../../components/ui/HowToPlayModal";
+import { useGameStore } from "../store/gameStore";
+import { HowToPlayModal } from "../components/ui/HowToPlayModal";
 
 const API_BASE =
   import.meta.env.VITE_API_URL || "";

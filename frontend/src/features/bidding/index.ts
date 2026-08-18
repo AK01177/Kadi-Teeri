@@ -1,1 +1,0 @@
-export { BiddingPage } from "./BiddingPage";

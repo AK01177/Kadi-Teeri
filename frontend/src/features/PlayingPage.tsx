@@ -1,11 +1,11 @@
-import { useGameStore } from "../../store/gameStore";
-import { SUIT_SYMBOLS, SUIT_NAMES } from "../../types/game";
-import type { Card as CardType } from "../../types/game";
-import { GameTable } from "../../components/table/GameTable";
-import { GameTable3D } from "../../components/table/GameTable3D";
-import { Hand } from "../../components/player/Hand";
-import { ActivityLog } from "../../components/ui/ActivityLog";
-import { useSoundEffects } from "../../hooks/useSoundEffects";
+import { useGameStore } from "../store/gameStore";
+import { SUIT_SYMBOLS, SUIT_NAMES } from "../types/game";
+import type { Card as CardType } from "../types/game";
+import { GameTable } from "../components/table/GameTable";
+import { GameTable3D } from "../components/table/GameTable3D";
+import { Hand } from "../components/player/Hand";
+import { ActivityLog } from "../components/ui/ActivityLog";
+import { useSoundEffects } from "../hooks/useSoundEffects";
 
 export function PlayingPage() {
   const { gameState, hand, seat, sendFn, trickWinner, is3DView, setIs3DView } = useGameStore();
