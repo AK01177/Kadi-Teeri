@@ -38,6 +38,10 @@ from game_engine import (
 )
 from room_manager import room_manager
 from ws_manager import manager as ws_manager
+from redis_client import redis_client
+
+# Set for holding strong references to background tasks to prevent garbage collection
+background_tasks = set()
 
 # ──────────────────────────── Logging ────────────────────────────
 
@@ -384,7 +388,9 @@ async def handle_message(
                     expire_trump_challenge(g)
                     await room_manager.save_room(room_id, g)
                     await _broadcast_full_state(room_id, g)
-            asyncio.create_task(_auto_expire_challenge())
+            task = asyncio.create_task(_auto_expire_challenge())
+            background_tasks.add(task)
+            task.add_done_callback(background_tasks.discard)
 
     elif msg.type == "challenge_accept":
         error = validate_challenge_accept(game, seat)

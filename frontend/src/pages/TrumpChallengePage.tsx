@@ -26,16 +26,17 @@ export function TrumpChallengePage() {
       return;
     }
 
-    const tick = () => {
-      const remaining = Math.max(
-        0,
-        Math.ceil(game.challenge_deadline! - Date.now() / 1000)
-      );
-      setCountdown(remaining);
-    };
-
-    tick();
-    const interval = setInterval(tick, 250);
+    setCountdown(10);
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
     return () => clearInterval(interval);
   }, [game?.challenge_deadline, isDuelActive]);
 
