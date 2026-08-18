@@ -5,11 +5,17 @@ Trick play, legal play validation, trick winner evaluation, and trick resolution
 from __future__ import annotations
 
 from typing import Optional
-from models import (
-    SUIT_NAMES, rank_index, Card, GameState, GameStatus,
-    TrickState, TrickPlay,
-)
+
 from engine.bheru import _check_bheru_reveal
+from models import (
+    SUIT_NAMES,
+    Card,
+    GameState,
+    GameStatus,
+    TrickPlay,
+    TrickState,
+    rank_index,
+)
 
 
 def _start_playing(game: GameState, bidder_seat: int) -> None:

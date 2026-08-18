@@ -6,8 +6,9 @@ from __future__ import annotations
 
 import time
 from typing import Optional
-from models import SUITS, SUIT_NAMES, GameState, GameStatus
+
 from engine.bidding import max_bid
+from models import SUIT_NAMES, SUITS, GameState, GameStatus
 
 
 def validate_trump(game: GameState, seat: int, suit: str) -> Optional[str]:

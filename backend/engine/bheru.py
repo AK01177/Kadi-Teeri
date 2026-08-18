@@ -5,9 +5,17 @@ Bheru (partner) call validation, assignment, and reveal logic.
 from __future__ import annotations
 
 from typing import Optional
+
 from models import (
-    RANKS, SUITS, SUIT_SYMBOLS, GameState, GameStatus,
-    BheruCall, BheruCallMode, BheruInfo, Card,
+    RANKS,
+    SUIT_SYMBOLS,
+    SUITS,
+    BheruCall,
+    BheruCallMode,
+    BheruInfo,
+    Card,
+    GameState,
+    GameStatus,
 )
 
 

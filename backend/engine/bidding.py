@@ -5,8 +5,12 @@ Bidding phase logic and validation.
 from __future__ import annotations
 
 from typing import Optional
+
 from models import (
-    GameState, GameStatus, BiddingState, BidEntry,
+    BiddingState,
+    BidEntry,
+    GameState,
+    GameStatus,
 )
 
 

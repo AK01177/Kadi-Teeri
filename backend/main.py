@@ -11,30 +11,50 @@ import os
 import json
 import logging
 import uuid
+import sys
 from contextlib import asynccontextmanager
 
+# Ensure backend directory is in sys.path for both root and sub-dir execution
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
 # pyrefly: ignore [missing-import]
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+
 # pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
+
 # pyrefly: ignore [missing-import]
 from fastapi.responses import FileResponse
+
 # pyrefly: ignore [missing-import]
 from pydantic import BaseModel
 
-from models import (
-    GameStatus, Card, BheruCall, BheruCallMode,
-    ClientMessage, ServerMessage,
-)
 from game_engine import (
-    validate_bid, place_bid, pass_bid,
-    validate_trump, select_trump,
-    validate_challenge_accept, accept_challenge, expire_trump_challenge,
-    validate_challenge_bid, place_challenge_bid,
-    validate_challenge_pass, pass_challenge_bid,
-    validate_bheru_calls, assign_bherus,
-    validate_play, play_card, resolve_trick,
-    deal_new_round, sanitize_game_state,
+    accept_challenge,
+    assign_bherus,
+    expire_trump_challenge,
+    pass_bid,
+    pass_challenge_bid,
+    place_bid,
+    place_challenge_bid,
+    play_card,
+    resolve_trick,
+    sanitize_game_state,
+    select_trump,
+    validate_bheru_calls,
+    validate_bid,
+    validate_challenge_accept,
+    validate_challenge_bid,
+    validate_challenge_pass,
+    validate_play,
+    validate_trump,
+)
+from models import (
+    Card,
+    ClientMessage,
+    GameStatus,
 )
 from room_manager import room_manager
 from ws_manager import manager as ws_manager
@@ -134,13 +154,13 @@ class NetworkInfoResponse(BaseModel):
 @app.get("/api/network-info", response_model=NetworkInfoResponse)
 async def get_network_info():
     """Return the server's LAN IP addresses for local play."""
+    import platform
     import socket
     import subprocess
-    import platform
-    
+
     lan_ips = set()
     hostname = socket.gethostname()
-    
+
     # 1. Try standard getaddrinfo
     try:
         for info in socket.getaddrinfo(hostname, None, socket.AF_INET):
@@ -433,13 +453,13 @@ async def handle_message(
         if error:
             await ws.send_json({"type": "error", "error": error})
             return
-            
+
         trick_completed = play_card(game, seat, card, auto_resolve=False)
         room_manager.save_room(room_id)
-        
+
         # Broadcast the full state including the 4th card
         await _broadcast_full_state(room_id, game)
-        
+
         if trick_completed:
             import asyncio
             # First 2s delay: cards sit on the table
@@ -454,14 +474,14 @@ async def handle_message(
             winner_seat = winner_entry.seat
             winner_name = game.players[winner_seat].name
             points = sum(tp.card.points() for tp in cards_played)
-            
+
             # Broadcast the popup
             await ws_manager.broadcast(room_id, {
                 "type": "trick_winner",
                 "name": winner_name,
                 "points": points
             })
-            
+
             # Second 2s delay: popup shows
             await asyncio.sleep(2.0)
 
@@ -495,7 +515,7 @@ async def handle_message(
         if error:
             await ws.send_json({"type": "error", "error": error})
             return
-            
+
         # If the target is currently connected, gracefully disconnect them
         target_ws = ws_manager.get_ws(target_id)
         if target_ws:
@@ -505,7 +525,7 @@ async def handle_message(
             except Exception:
                 pass
             ws_manager.remove(target_id)
-            
+
         await _broadcast_full_state(room_id, game)
 
     else:
@@ -530,7 +550,7 @@ async def serve_spa(full_path: str):
     potential_path = os.path.join(static_dir, full_path)
     if full_path and os.path.isfile(potential_path):
         return FileResponse(potential_path)
-    
+
     # Otherwise, return index.html for React Router to handle
     index_path = os.path.join(static_dir, "index.html")
     if os.path.isfile(index_path):
@@ -542,7 +562,7 @@ async def serve_spa(full_path: str):
                 "Expires": "0",
             }
         )
-        
+
     return {"error": "Frontend not built. Run 'npm run build' in the frontend directory."}
 
 

@@ -2,20 +2,34 @@
 Comprehensive Game Engine and Mechanics Tests for Kadi Teeri Online.
 """
 
-import pytest
-from models import (
-    Card, Player, GameState, GameStatus, RoomConfig,
-    BheruCall, BheruCallMode, BheruInfo, TrickState, TrickPlay,
-)
 from game_engine import (
-    make_deck, balance_deck, deal_cards, sort_hand,
-    init_bidding, validate_bid, place_bid, pass_bid,
-    validate_trump, select_trump,
-    validate_challenge_accept, accept_challenge, expire_trump_challenge,
-    validate_challenge_bid, place_challenge_bid, validate_challenge_pass, pass_challenge_bid,
-    validate_bheru_calls, assign_bherus,
-    legal_plays, validate_play, play_card, resolve_trick,
-    _determine_trick_winner, finish_round, deal_new_round, sanitize_game_state,
+    accept_challenge,
+    assign_bherus,
+    balance_deck,
+    init_bidding,
+    legal_plays,
+    make_deck,
+    pass_bid,
+    pass_challenge_bid,
+    place_bid,
+    place_challenge_bid,
+    play_card,
+    sanitize_game_state,
+    select_trump,
+    validate_bheru_calls,
+    validate_challenge_accept,
+    validate_challenge_bid,
+    validate_challenge_pass,
+    validate_trump,
+)
+from models import (
+    BheruCall,
+    BheruCallMode,
+    Card,
+    GameState,
+    GameStatus,
+    Player,
+    RoomConfig,
 )
 from room_manager import RoomManager
 
@@ -216,7 +230,7 @@ def test_sanitize_game_state_hides_private_hands():
 def test_room_manager_full_lifecycle():
     """Test room creation, joining, configuration, start, and removal."""
     rm = RoomManager()
-    
+
     # Create room
     room_id, game = rm.create_room("h1", "Host")
     assert len(room_id) == 6

@@ -10,31 +10,61 @@ all functions from the modular engine package (`backend/engine`).
 
 from __future__ import annotations
 
-from typing import Optional
-from models import Card, BheruCall, GameState
-
-from engine.deck import (
-    make_deck, balance_deck, shuffle_deck, deal_cards, sort_hand,
-)
-from engine.bidding import (
-    max_bid, init_bidding, validate_bid, place_bid, pass_bid, advance_bidding_turn,
-)
-from engine.trump import (
-    validate_trump, select_trump, validate_challenge_accept, accept_challenge,
-    expire_trump_challenge, validate_challenge_bid, place_challenge_bid,
-    validate_challenge_pass, pass_challenge_bid,
+from engine.bheru import (
+    _check_bheru_reveal,
+    _find_all_card_holders,
+    _find_card_holder,
+    max_bherus,
+    validate_bheru_calls,
 )
 from engine.bheru import (
-    max_bherus, validate_bheru_calls, assign_bherus as _assign_bherus,
-    _find_card_holder, _find_all_card_holders, _check_bheru_reveal,
+    assign_bherus as _assign_bherus,
 )
-from engine.trick import (
-    legal_plays, validate_play, play_card as _play_card, resolve_trick as _resolve_trick,
-    _determine_trick_winner, _highest_card_last_wins, _start_playing,
+from engine.bidding import (
+    advance_bidding_turn,
+    init_bidding,
+    max_bid,
+    pass_bid,
+    place_bid,
+    validate_bid,
+)
+from engine.deck import (
+    balance_deck,
+    deal_cards,
+    make_deck,
+    shuffle_deck,
+    sort_hand,
 )
 from engine.scoring import (
-    finish_round, deal_new_round, sanitize_game_state,
+    deal_new_round,
+    finish_round,
+    sanitize_game_state,
 )
+from engine.trick import (
+    _determine_trick_winner,
+    _highest_card_last_wins,
+    _start_playing,
+    legal_plays,
+    validate_play,
+)
+from engine.trick import (
+    play_card as _play_card,
+)
+from engine.trick import (
+    resolve_trick as _resolve_trick,
+)
+from engine.trump import (
+    accept_challenge,
+    expire_trump_challenge,
+    pass_challenge_bid,
+    place_challenge_bid,
+    select_trump,
+    validate_challenge_accept,
+    validate_challenge_bid,
+    validate_challenge_pass,
+    validate_trump,
+)
+from models import BheruCall, Card, GameState
 
 
 def assign_bherus(game: GameState, seat: int, calls: list[BheruCall]) -> None:

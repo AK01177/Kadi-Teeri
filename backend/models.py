@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from enum import Enum
 from typing import Optional
+
 # pyrefly: ignore [missing-import]
 from pydantic import BaseModel, Field
-
 
 # ──────────────────────────── Card Constants ────────────────────────────
 

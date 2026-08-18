@@ -5,9 +5,14 @@ Deck creation, card balancing, shuffling, and hand sorting.
 from __future__ import annotations
 
 import random
+
 from models import (
-    RANKS, SUITS, REMOVAL_PRIORITY_1DECK, REMOVAL_PRIORITY_2DECK,
-    rank_index, Card,
+    RANKS,
+    REMOVAL_PRIORITY_1DECK,
+    REMOVAL_PRIORITY_2DECK,
+    SUITS,
+    Card,
+    rank_index,
 )
 
 

@@ -4,9 +4,9 @@ Scoring, round completion, new round dealing, and state sanitization.
 
 from __future__ import annotations
 
-from models import GameState, GameStatus, RoundResult
-from engine.deck import make_deck, balance_deck, shuffle_deck, deal_cards
 from engine.bidding import init_bidding
+from engine.deck import balance_deck, deal_cards, make_deck, shuffle_deck
+from models import GameState, GameStatus, RoundResult
 
 
 def finish_round(game: GameState) -> None:

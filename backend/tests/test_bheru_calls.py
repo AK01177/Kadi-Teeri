@@ -1,6 +1,6 @@
-import pytest
-from models import BheruCall, BheruCallMode, GameState, Player, RoomConfig, GameStatus
 from game_engine import validate_bheru_calls
+from models import BheruCall, BheruCallMode, GameState, GameStatus, Player, RoomConfig
+
 
 def test_duplicate_bheru_calls():
     game = GameState(
@@ -9,7 +9,7 @@ def test_duplicate_bheru_calls():
         players=[Player(id="1", name="1", seat=0)] * 6, # 6 players -> max_bherus = 2
         config=RoomConfig(deck_count=1)
     )
-    
+
     calls = [
         BheruCall(rank="A", suit="S", mode=BheruCallMode.SIMPLE),
         BheruCall(rank="A", suit="S", mode=BheruCallMode.SIMPLE),

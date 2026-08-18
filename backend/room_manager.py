@@ -7,16 +7,18 @@ configuration, and game start/restart.
 
 from __future__ import annotations
 
-import random
-import string
 import logging
+import random
 from typing import Optional
 
 from db import supabase
-from models import (
-    Player, GameState, GameStatus, RoomConfig,
-)
 from game_engine import deal_new_round
+from models import (
+    GameState,
+    GameStatus,
+    Player,
+    RoomConfig,
+)
 
 logger = logging.getLogger("kadi_teeri.room")
 
@@ -95,7 +97,7 @@ class RoomManager:
 
         self._rooms[room_id] = game
         self._player_rooms[player_id] = room_id
-        
+
         self.save_room(room_id)
 
         logger.info(f"Room {room_id} created by {player_name}")
@@ -159,7 +161,7 @@ class RoomManager:
 
         game.log.append(f"{player_name} joined the room.")
         logger.info(f"Player {player_name} joined room {room_id} at seat {seat}")
-        
+
         self.save_room(room_id)
 
         return None, game
