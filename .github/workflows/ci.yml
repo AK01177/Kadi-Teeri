@@ -61,7 +61,7 @@ jobs:
         run: npm run lint
 
       - name: Run Frontend Tests
-        run: npx vitest run
+        run: npm run test
 
       - name: Run Frontend Build
         run: npm run build
