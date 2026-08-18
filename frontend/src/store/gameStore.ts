@@ -73,7 +73,7 @@ const sessionStr = localStorage.getItem("kadi_session");
 let session = null;
 try {
   if (sessionStr) session = JSON.parse(sessionStr);
-} catch (e) {
+} catch {
   // ignore
 }
 

@@ -160,6 +160,8 @@ export function GameTable3D({
      ═══════════════════════════════════════════ */
   const cardsPlayed = game.trick?.cards_played || [];
 
+  const trickCardsString = JSON.stringify(cardsPlayed);
+
   const trickLayout = useMemo(() => {
     const count = cardsPlayed.length;
     if (count === 0) return [];
@@ -184,7 +186,7 @@ export function GameTable3D({
         (i - (count - 1) / 2) * 0.06,
       ] as [number, number, number],
     }));
-  }, [JSON.stringify(cardsPlayed), isMobile]);
+  }, [trickCardsString, isMobile, cardsPlayed]);
 
   /* ═══════════════════════════════════════════
      Legal card set for hand rendering

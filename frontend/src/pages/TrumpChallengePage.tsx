@@ -1,27 +1,23 @@
 import { useState, useEffect, useCallback } from "react";
 import { useGameStore } from "../store/gameStore";
-import { SUIT_SYMBOLS, SUIT_NAMES, SUITS } from "../types/game";
+import { SUIT_SYMBOLS, SUIT_NAMES } from "../types/game";
 import { GameTable } from "../components/GameTable";
 import { Hand } from "../components/Hand";
 import { ActivityLog } from "../components/ActivityLog";
 
 export function TrumpChallengePage() {
-  const { gameState, hand, seat, sendFn, selectedTrump, setSelectedTrump } =
-    useGameStore();
+  const { gameState, hand, seat, sendFn } = useGameStore();
 
-  const game = gameState;
-  const seatLabel = (s: number) => game?.players[s]?.name || `Seat ${s}`;
-
-  const isDuelActive = game?.challenge_duel_seats !== null && game?.challenge_duel_seats !== undefined;
-  const isInDuel = isDuelActive && game?.challenge_duel_seats!.includes(seat as number);
-  const isMyTurnInDuel = isDuelActive && game?.turn_seat === seat && isInDuel;
-  const iAmBidder = game?.bidder_seat === seat;
+  const isDuelActive = gameState?.challenge_duel_seats !== null && gameState?.challenge_duel_seats !== undefined;
+  const isInDuel = isDuelActive && gameState?.challenge_duel_seats!.includes(seat as number);
+  const isMyTurnInDuel = isDuelActive && gameState?.turn_seat === seat && isInDuel;
+  const iAmBidder = gameState?.bidder_seat === seat;
 
   // ─── Countdown Timer ───
   const [countdown, setCountdown] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!game?.challenge_deadline || isDuelActive) {
+    if (!gameState?.challenge_deadline || isDuelActive) {
       setCountdown(null);
       return;
     }
@@ -38,7 +34,7 @@ export function TrumpChallengePage() {
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [game?.challenge_deadline, isDuelActive]);
+  }, [gameState?.challenge_deadline, isDuelActive]);
 
   // ─── Actions ───
   const handleChallenge = useCallback(() => {
@@ -53,14 +49,10 @@ export function TrumpChallengePage() {
     sendFn?.({ type: "challenge_pass" });
   }, [sendFn]);
 
-  const confirmTrump = useCallback(() => {
-    if (selectedTrump) {
-      sendFn?.({ type: "select_trump", suit: selectedTrump });
-      setSelectedTrump(null);
-    }
-  }, [selectedTrump, sendFn, setSelectedTrump]);
-
   if (!gameState || seat === null) return null;
+
+  const game = gameState;
+  const seatLabel = (s: number) => game.players[s]?.name || `Seat ${s}`;
 
   // ─── Phase: Duel winner picks new trump ───
   if (
