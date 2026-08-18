@@ -234,7 +234,7 @@ export function GameTable3D({
 
   /* ── Responsive 3D scale factors ── */
   const trickCardScale = isMobile
-    ? (isCompact ? 0.35 : 0.45)
+    ? (isCompact ? 0.55 : 0.65)
     : (isCompact ? 0.6 : 0.75);
   const opponentCardScale = isMobile
     ? (isCompact ? 0.18 : 0.22)
