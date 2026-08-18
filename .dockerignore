@@ -1,0 +1,24 @@
+# Git & Docs
+.git
+.gitignore
+.github
+docs
+*.md
+
+# Python
+.venv
+backend/.venv
+__pycache__
+backend/__pycache__
+.pytest_cache
+backend/.pytest_cache
+.ruff_cache
+*.pyc
+*.pyo
+
+# Node / Frontend
+frontend/node_modules
+frontend/dist
+backend/static
+.env
+.DS_Store
