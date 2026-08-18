@@ -111,6 +111,10 @@ def init_bidding(game: GameState) -> None:
     game.trump_suit = None
     game.bid_target = None
     game.bidder_seat = None
+    game.trump_challenge_used = False
+    game.challenge_deadline = None
+    game.challenge_duel_seats = None
+    game.challenger_seat = None
     game.bheru_calls = []
     game.bherus = []
     game.is_solo = False
@@ -211,10 +215,121 @@ def validate_trump(game: GameState, seat: int, suit: str) -> Optional[str]:
 
 
 def select_trump(game: GameState, seat: int, suit: str) -> None:
-    """Set the trump suit and move to bheru selection."""
+    """Set the trump suit. If challenge hasn't been used yet, enter challenge phase."""
+    import time
     game.trump_suit = suit
-    game.status = GameStatus.BHERU
     game.log.append(f"{game.players[seat].name} names {SUIT_NAMES[suit]} as trump.")
+
+    if not game.trump_challenge_used:
+        # Enter the one-time challenge window
+        game.status = GameStatus.TRUMP_CHALLENGE
+        game.trump_challenge_used = True
+        game.challenge_deadline = time.time() + 10  # 10 seconds
+        game.challenge_duel_seats = None
+        game.challenger_seat = None
+        game.log.append("Other players have 10 seconds to challenge the bid!")
+    else:
+        # Challenge already used this round — go straight to bheru
+        game.status = GameStatus.BHERU
+
+
+# ──────────────────────────── Trump Challenge ────────────────────────────
+
+
+def validate_challenge_accept(game: GameState, seat: int) -> Optional[str]:
+    """Validate that a player can accept the trump challenge."""
+    if game.status != GameStatus.TRUMP_CHALLENGE:
+        return "Not in trump challenge phase."
+    if game.challenge_duel_seats is not None:
+        return "Challenge duel already in progress."
+    if seat == game.bidder_seat:
+        return "You are the current bidder — you cannot challenge yourself."
+    return None
+
+
+def accept_challenge(game: GameState, seat: int) -> None:
+    """A player accepts the challenge, starting a mini-bid duel."""
+    original_bidder = game.bidder_seat
+    new_amount = game.bid_target + 20
+    game.bid_target = new_amount
+    game.bidder_seat = seat
+    game.challenger_seat = seat
+    game.challenge_duel_seats = [original_bidder, seat]
+    game.challenge_deadline = None  # Cancel the countdown
+    game.turn_seat = original_bidder  # Original bidder responds first
+    game.trump_suit = None  # Reset trump — duel winner picks new one
+    game.log.append(
+        f"{game.players[seat].name} challenges the bid at {new_amount}!"
+    )
+
+
+def expire_trump_challenge(game: GameState) -> None:
+    """No one challenged within the time limit — proceed to bheru."""
+    if game.status != GameStatus.TRUMP_CHALLENGE:
+        return
+    if game.challenge_duel_seats is not None:
+        return  # Duel in progress, don't expire
+    game.challenge_deadline = None
+    game.status = GameStatus.BHERU
+    game.log.append("No one challenged. Proceeding to partner selection.")
+
+
+def validate_challenge_bid(game: GameState, seat: int) -> Optional[str]:
+    """Validate a raise in the mini-bid duel."""
+    if game.status != GameStatus.TRUMP_CHALLENGE:
+        return "Not in trump challenge phase."
+    if game.challenge_duel_seats is None:
+        return "No challenge duel in progress."
+    if seat not in game.challenge_duel_seats:
+        return "You are not part of this challenge duel."
+    if game.turn_seat != seat:
+        return "Not your turn in the duel."
+    return None
+
+
+def place_challenge_bid(game: GameState, seat: int) -> None:
+    """Raise in the challenge duel (+20 from current bid)."""
+    new_amount = game.bid_target + 20
+    max_allowed = max_bid(game.config.deck_count)
+    if new_amount > max_allowed:
+        # Can't raise further — auto-win for the other side
+        pass_challenge_bid(game, seat)
+        return
+    game.bid_target = new_amount
+    game.bidder_seat = seat
+    # Switch turn to the other duelist
+    other = [s for s in game.challenge_duel_seats if s != seat][0]
+    game.turn_seat = other
+    game.log.append(f"{game.players[seat].name} raises to {new_amount}.")
+
+
+def validate_challenge_pass(game: GameState, seat: int) -> Optional[str]:
+    """Validate passing in the mini-bid duel."""
+    if game.status != GameStatus.TRUMP_CHALLENGE:
+        return "Not in trump challenge phase."
+    if game.challenge_duel_seats is None:
+        return "No challenge duel in progress."
+    if seat not in game.challenge_duel_seats:
+        return "You are not part of this challenge duel."
+    if game.turn_seat != seat:
+        return "Not your turn in the duel."
+    return None
+
+
+def pass_challenge_bid(game: GameState, seat: int) -> None:
+    """Pass in the challenge duel — the other player wins."""
+    winner = [s for s in game.challenge_duel_seats if s != seat][0]
+    game.bidder_seat = winner
+    game.turn_seat = winner
+    game.challenge_duel_seats = None
+    game.challenger_seat = None
+    game.challenge_deadline = None
+    # Winner must now pick a new trump suit
+    game.status = GameStatus.TRUMP
+    game.log.append(
+        f"{game.players[seat].name} concedes. "
+        f"{game.players[winner].name} wins the challenge at {game.bid_target} and will choose trump."
+    )
 
 
 # ──────────────────────────── Bheru Selection ────────────────────────────
@@ -660,6 +775,11 @@ def sanitize_game_state(game: GameState) -> dict:
         "rounds_played": game.rounds_played,
         "wins": game.wins,
         "log": game.log[-20:],  # Last 20 log entries
+        # Trump challenge fields
+        "trump_challenge_used": game.trump_challenge_used,
+        "challenge_deadline": game.challenge_deadline,
+        "challenge_duel_seats": game.challenge_duel_seats,
+        "challenger_seat": game.challenger_seat,
     }
 
     # Bidding state

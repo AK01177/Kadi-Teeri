@@ -66,6 +66,7 @@ class GameStatus(str, Enum):
     LOBBY = "lobby"
     BIDDING = "bidding"
     TRUMP = "trump"
+    TRUMP_CHALLENGE = "trump_challenge"
     BHERU = "bheru"
     PLAYING = "playing"
     ROUND_END = "round_end"
@@ -206,6 +207,12 @@ class GameState(BaseModel):
     trump_suit: Optional[str] = None
     bid_target: Optional[int] = None
     bidder_seat: Optional[int] = None
+
+    # Trump Challenge (one-time chance to contest after trump is picked)
+    trump_challenge_used: bool = False
+    challenge_deadline: Optional[float] = None  # server timestamp
+    challenge_duel_seats: Optional[list[int]] = None  # [original_bidder, challenger]
+    challenger_seat: Optional[int] = None
 
     # Bheru
     bheru_calls: list[BheruCall] = []

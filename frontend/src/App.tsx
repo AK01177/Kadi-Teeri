@@ -7,6 +7,7 @@ import { HomePage } from "./pages/HomePage";
 import { LobbyPage } from "./pages/LobbyPage";
 import { BiddingPage } from "./pages/BiddingPage";
 import { TrumpSelectPage } from "./pages/TrumpSelectPage";
+import { TrumpChallengePage } from "./pages/TrumpChallengePage";
 import { BheruSelectPage } from "./pages/BheruSelectPage";
 import { PlayingPage } from "./pages/PlayingPage";
 import { RoundEndPage } from "./pages/RoundEndPage";
@@ -188,6 +189,8 @@ function App() {
         return <BiddingPage />;
       case "trump":
         return <TrumpSelectPage />;
+      case "trump_challenge":
+        return <TrumpChallengePage />;
       case "bheru":
         return <BheruSelectPage />;
       case "playing":

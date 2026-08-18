@@ -29,6 +29,9 @@ from models import (
 from game_engine import (
     validate_bid, place_bid, pass_bid,
     validate_trump, select_trump,
+    validate_challenge_accept, accept_challenge, expire_trump_challenge,
+    validate_challenge_bid, place_challenge_bid,
+    validate_challenge_pass, pass_challenge_bid,
     validate_bheru_calls, assign_bherus,
     validate_play, play_card, resolve_trick,
     deal_new_round, sanitize_game_state,
@@ -362,6 +365,48 @@ async def handle_message(
             await ws.send_json({"type": "error", "error": error})
             return
         select_trump(game, seat, msg.suit)
+        room_manager.save_room(room_id)
+        await _broadcast_full_state(room_id, game)
+
+        # If we entered challenge phase, start auto-expire timer
+        if game.status == GameStatus.TRUMP_CHALLENGE:
+            import asyncio
+            async def _auto_expire_challenge():
+                await asyncio.sleep(10)
+                room = room_manager.get_room(room_id)
+                if room is None:
+                    return
+                g = room["game"]
+                if g.status == GameStatus.TRUMP_CHALLENGE and g.challenge_duel_seats is None:
+                    expire_trump_challenge(g)
+                    room_manager.save_room(room_id)
+                    await _broadcast_full_state(room_id, g)
+            asyncio.create_task(_auto_expire_challenge())
+
+    elif msg.type == "challenge_accept":
+        error = validate_challenge_accept(game, seat)
+        if error:
+            await ws.send_json({"type": "error", "error": error})
+            return
+        accept_challenge(game, seat)
+        room_manager.save_room(room_id)
+        await _broadcast_full_state(room_id, game)
+
+    elif msg.type == "challenge_bid":
+        error = validate_challenge_bid(game, seat)
+        if error:
+            await ws.send_json({"type": "error", "error": error})
+            return
+        place_challenge_bid(game, seat)
+        room_manager.save_room(room_id)
+        await _broadcast_full_state(room_id, game)
+
+    elif msg.type == "challenge_pass":
+        error = validate_challenge_pass(game, seat)
+        if error:
+            await ws.send_json({"type": "error", "error": error})
+            return
+        pass_challenge_bid(game, seat)
         room_manager.save_room(room_id)
         await _broadcast_full_state(room_id, game)
 

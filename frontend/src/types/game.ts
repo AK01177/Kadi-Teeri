@@ -72,6 +72,7 @@ export type GameStatus =
   | "lobby"
   | "bidding"
   | "trump"
+  | "trump_challenge"
   | "bheru"
   | "playing"
   | "round_end";
@@ -86,6 +87,10 @@ export interface GameState {
   trump_suit: string | null;
   bid_target: number | null;
   bidder_seat: number | null;
+  trump_challenge_used: boolean;
+  challenge_deadline: number | null;  // server unix timestamp
+  challenge_duel_seats: number[] | null;  // [original_bidder, challenger]
+  challenger_seat: number | null;
   is_solo: boolean;
   bherus: BheruInfo[];
   trick?: TrickState;
