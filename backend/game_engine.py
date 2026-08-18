@@ -122,7 +122,7 @@ def init_bidding(game: GameState) -> None:
     game.trick_number = 0
     game.captured = {}
     game.round_result = None
-    game.log.append(f"— Round {game.rounds_played + 1} — {game.players[first].name} bids first.")
+    game.add_log(f"— Round {game.rounds_played + 1} — {game.players[first].name} bids first.")
 
 
 def validate_bid(game: GameState, seat: int, amount: int) -> Optional[str]:
@@ -153,7 +153,7 @@ def place_bid(game: GameState, seat: int, amount: int) -> None:
     b.highest_bid = amount
     b.highest_bidder_seat = seat
     b.history.append(BidEntry(seat=seat, action="bid", amount=amount))
-    game.log.append(f"{game.players[seat].name} bids {amount}.")
+    game.add_log(f"{game.players[seat].name} bids {amount}.")
     advance_bidding_turn(game)
 
 
@@ -162,7 +162,7 @@ def pass_bid(game: GameState, seat: int) -> None:
     b = game.bidding
     b.passed[seat] = True
     b.history.append(BidEntry(seat=seat, action="pass"))
-    game.log.append(f"{game.players[seat].name} passes.")
+    game.add_log(f"{game.players[seat].name} passes.")
     advance_bidding_turn(game)
 
 
@@ -178,11 +178,11 @@ def advance_bidding_turn(game: GameState) -> None:
             # Everyone passed, force minimum bid
             b.highest_bid = 150
             b.highest_bidder_seat = winner
-            game.log.append(
+            game.add_log(
                 f"{game.players[winner].name} is forced to take the minimum bid of 150 (everyone else passed)."
             )
         else:
-            game.log.append(
+            game.add_log(
                 f"{game.players[winner].name} wins the bid at {b.highest_bid} and will choose trump."
             )
         game.bidder_seat = winner
@@ -218,7 +218,7 @@ def select_trump(game: GameState, seat: int, suit: str) -> None:
     """Set the trump suit. If challenge hasn't been used yet, enter challenge phase."""
     import time
     game.trump_suit = suit
-    game.log.append(f"{game.players[seat].name} names {SUIT_NAMES[suit]} as trump.")
+    game.add_log(f"{game.players[seat].name} names {SUIT_NAMES[suit]} as trump.")
 
     if not game.trump_challenge_used:
         # Enter the one-time challenge window
@@ -227,7 +227,7 @@ def select_trump(game: GameState, seat: int, suit: str) -> None:
         game.challenge_deadline = time.time() + 10  # 10 seconds
         game.challenge_duel_seats = None
         game.challenger_seat = None
-        game.log.append("Other players have 10 seconds to challenge the bid!")
+        game.add_log("Other players have 10 seconds to challenge the bid!")
     else:
         # Challenge already used this round — go straight to bheru
         game.status = GameStatus.BHERU
@@ -258,7 +258,7 @@ def accept_challenge(game: GameState, seat: int) -> None:
     game.challenge_deadline = None  # Cancel the countdown
     game.turn_seat = original_bidder  # Original bidder responds first
     game.trump_suit = None  # Reset trump — duel winner picks new one
-    game.log.append(
+    game.add_log(
         f"{game.players[seat].name} challenges the bid at {new_amount}!"
     )
 
@@ -271,7 +271,7 @@ def expire_trump_challenge(game: GameState) -> None:
         return  # Duel in progress, don't expire
     game.challenge_deadline = None
     game.status = GameStatus.BHERU
-    game.log.append("No one challenged. Proceeding to partner selection.")
+    game.add_log("No one challenged. Proceeding to partner selection.")
 
 
 def validate_challenge_bid(game: GameState, seat: int) -> Optional[str]:
@@ -300,7 +300,7 @@ def place_challenge_bid(game: GameState, seat: int) -> None:
     # Switch turn to the other duelist
     other = [s for s in game.challenge_duel_seats if s != seat][0]
     game.turn_seat = other
-    game.log.append(f"{game.players[seat].name} raises to {new_amount}.")
+    game.add_log(f"{game.players[seat].name} raises to {new_amount}.")
 
 
 def validate_challenge_pass(game: GameState, seat: int) -> Optional[str]:
@@ -326,7 +326,7 @@ def pass_challenge_bid(game: GameState, seat: int) -> None:
     game.challenge_deadline = None
     # Winner must now pick a new trump suit
     game.status = GameStatus.TRUMP
-    game.log.append(
+    game.add_log(
         f"{game.players[seat].name} concedes. "
         f"{game.players[winner].name} wins the challenge at {game.bid_target} and will choose trump."
     )
@@ -390,7 +390,7 @@ def assign_bherus(game: GameState, seat: int, calls: list[BheruCall]) -> None:
     if not calls:
         # Solo play
         game.is_solo = True
-        game.log.append(f"{game.players[seat].name} chooses to play SOLO against the table!")
+        game.add_log(f"{game.players[seat].name} chooses to play SOLO against the table!")
     else:
         game.is_solo = False
         for call in calls:
@@ -401,7 +401,7 @@ def assign_bherus(game: GameState, seat: int, calls: list[BheruCall]) -> None:
                 holder = _find_card_holder(game, call.rank, call.suit, exclude_seat=None)
                 if holder == seat:
                     # Bidder holds it — this call is effectively solo for this bheru slot
-                    game.log.append(
+                    game.add_log(
                         f"{game.players[seat].name} calls {call.rank}{SUIT_SYMBOLS[call.suit]} "
                         f"— they hold it themselves!"
                     )
@@ -409,7 +409,7 @@ def assign_bherus(game: GameState, seat: int, calls: list[BheruCall]) -> None:
                     bheru_info.revealed = True
                 else:
                     bheru_info.holder_seat = holder
-                    game.log.append(
+                    game.add_log(
                         f"{game.players[seat].name} calls for {call.rank}{SUIT_SYMBOLS[call.suit]} "
                         f"— a secret partner has been chosen..."
                     )
@@ -418,7 +418,7 @@ def assign_bherus(game: GameState, seat: int, calls: list[BheruCall]) -> None:
                 # 2-deck: bidder has one, wants the other
                 holder = _find_card_holder(game, call.rank, call.suit, exclude_seat=seat)
                 bheru_info.holder_seat = holder
-                game.log.append(
+                game.add_log(
                     f"{game.players[seat].name} calls {call.rank}{SUIT_SYMBOLS[call.suit]} (fix) "
                     f"— the other copy holder is the secret partner..."
                 )
@@ -438,13 +438,13 @@ def assign_bherus(game: GameState, seat: int, calls: list[BheruCall]) -> None:
                     game.bherus.append(bheru_info)
                     bheru_info2 = BheruInfo(call=call, holder_seat=holders[1], revealed=False)
                     game.bherus.append(bheru_info2)
-                    game.log.append(
+                    game.add_log(
                         f"{game.players[seat].name} calls both {call.rank}{SUIT_SYMBOLS[call.suit]} "
                         f"— two secret partners have been chosen..."
                     )
                     continue  # Skip the append below since we already added both
 
-                game.log.append(
+                game.add_log(
                     f"{game.players[seat].name} calls both {call.rank}{SUIT_SYMBOLS[call.suit]} "
                     f"— secret partner(s) chosen..."
                 )
@@ -453,7 +453,7 @@ def assign_bherus(game: GameState, seat: int, calls: list[BheruCall]) -> None:
                 # 2-deck: whoever plays it second becomes the bheru
                 bheru_info.holder_seat = None  # Unknown until play
                 bheru_info.play_count = 0
-                game.log.append(
+                game.add_log(
                     f"{game.players[seat].name} calls {call.rank}{SUIT_SYMBOLS[call.suit]} (second play) "
                     f"— the partner will be revealed during play..."
                 )
@@ -555,7 +555,7 @@ def play_card(game: GameState, seat: int, card: Card, auto_resolve: bool = True)
     # Check bheru reveals
     _check_bheru_reveal(game, seat, card)
 
-    game.log.append(f"{game.players[seat].name} plays {card.label()}.")
+    game.add_log(f"{game.players[seat].name} plays {card.label()}.")
 
     # Check if trick is complete
     if len(game.trick.cards_played) == n:
@@ -585,12 +585,12 @@ def _check_bheru_reveal(game: GameState, seat: int, card: Card) -> None:
                 # Second play — this player is the bheru
                 bheru.holder_seat = seat
                 bheru.revealed = True
-                game.log.append(
+                game.add_log(
                     f"The card falls for the second time — {game.players[seat].name} "
                     f"is revealed as the secret partner!"
                 )
             elif bheru.play_count == 1:
-                game.log.append(
+                game.add_log(
                     f"{game.players[seat].name} plays {call.rank}{SUIT_SYMBOLS[call.suit]} "
                     f"first — not the partner yet..."
                 )
@@ -598,7 +598,7 @@ def _check_bheru_reveal(game: GameState, seat: int, card: Card) -> None:
             # Simple, Fix, Both — reveal when the called card is played
             if bheru.holder_seat == seat:
                 bheru.revealed = True
-                game.log.append(
+                game.add_log(
                     f"The secret card falls — {game.players[seat].name} "
                     f"is revealed as the hidden partner!"
                 )
@@ -624,7 +624,7 @@ def resolve_trick(game: GameState) -> None:
     for tp in cards_played:
         game.captured[winner_seat].append(tp.card)
 
-    game.log.append(f"{game.players[winner_seat].name} takes the trick.")
+    game.add_log(f"{game.players[winner_seat].name} takes the trick.")
 
     # Check if all cards have been played
     cards_per_player = len(game.hands.get(0, [])) if 0 in game.hands else 0
@@ -723,11 +723,11 @@ def finish_round(game: GameState) -> None:
     game.rounds_played += 1
 
     if bidding_won:
-        game.log.append(
+        game.add_log(
             f"Bidding side reaches {bidding_points}/{game.bid_target} — contract made!"
         )
     else:
-        game.log.append(
+        game.add_log(
             f"Bidding side only reaches {bidding_points}/{game.bid_target} — contract failed."
         )
 

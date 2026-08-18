@@ -6,7 +6,7 @@ const API_BASE =
   import.meta.env.VITE_API_URL || "";
 
 export function HomePage() {
-  const { playerName, setPlayerName, showToast, connectionMode, setConnectionMode } = useGameStore();
+  const { playerName, setPlayerName, showToast, connectionMode, setConnectionMode, connectToRoom } = useGameStore();
   const [name, setName] = useState(playerName || "");
   const [joinCode, setJoinCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -64,10 +64,7 @@ export function HomePage() {
       );
 
       // Connect via WebSocket
-      const connectWs = (window as any).__kadiConnect;
-      if (connectWs) {
-        connectWs(data.room_id, data.player_id, trimmed);
-      }
+      connectToRoom(data.room_id, data.player_id, trimmed);
     } catch {
       showToast("Could not create room. Check your connection.");
     }
@@ -108,10 +105,7 @@ export function HomePage() {
       setPlayerName(trimmed);
 
       // Connect via WebSocket
-      const connectWs = (window as any).__kadiConnect;
-      if (connectWs) {
-        connectWs(code, null, trimmed);
-      }
+      connectToRoom(code, null, trimmed);
     } catch {
       showToast("Could not join room. Check your connection.");
     }

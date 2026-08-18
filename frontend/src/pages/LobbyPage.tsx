@@ -5,7 +5,7 @@ const API_BASE =
   import.meta.env.VITE_API_URL || "";
 
 export function LobbyPage() {
-  const { gameState, isHost, roomId, sendFn, showToast, connectionMode } =
+  const { gameState, isHost, roomId, sendFn, showToast, connectionMode, playerId } =
     useGameStore();
 
   const [lanInfo, setLanInfo] = useState<{ lan_ips: string[]; port: number } | null>(null);
@@ -214,8 +214,7 @@ export function LobbyPage() {
                 </div>
                 <span>
                   {p.name}
-                  {p.id ===
-                    useGameStore.getState().playerId
+                  {p.id === playerId
                     ? " (you)"
                     : ""}
                   {p.ping_ms !== undefined && (
@@ -230,7 +229,7 @@ export function LobbyPage() {
                   )}
                 </span>
                 {p.is_host && <span className="host-tag">HOST</span>}
-                {isHost && p.id !== useGameStore.getState().playerId && (
+                {isHost && p.id !== playerId && (
                   <button
                     className="btn btn-sm btn-ghost"
                     onClick={() => sendFn?.({ type: "remove_player", target_player_id: p.id })}

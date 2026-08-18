@@ -9,5 +9,18 @@ backend/.pytest_cache/
 frontend/node_modules/
 frontend/dist/
 backend/static/
+
+# Environment files (NEVER commit secrets)
 .env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# OS / IDE
 .DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo

@@ -233,7 +233,11 @@ class GameState(BaseModel):
     # Log
     log: list[str] = []
 
-
+    def add_log(self, msg: str):
+        """Add a message to the game log, capping at 100 entries to prevent memory leaks."""
+        self.log.append(msg)
+        if len(self.log) > 100:
+            self.log = self.log[-100:]
 # ──────────────────────────── WebSocket Messages ────────────────────────────
 
 
@@ -242,6 +246,8 @@ class ClientMessage(BaseModel):
     type: str
     # Optional payloads depending on type:
     name: Optional[str] = None
+    player_id: Optional[str] = None
+    target_player_id: Optional[str] = None
     player_count: Optional[int] = None
     deck_count: Optional[int] = None
     amount: Optional[int] = None

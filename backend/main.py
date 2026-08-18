@@ -73,7 +73,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict to your frontend domain
+    allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://localhost:8000").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -214,9 +214,7 @@ async def websocket_endpoint(ws: WebSocket, room_id: str):
                 return
 
             # Check if they're providing a player_id (reconnecting)
-            # The client sends player_id in a custom field
-            raw_data = json.loads(raw)
-            provided_player_id = raw_data.get("player_id")
+            provided_player_id = msg.player_id
 
             if provided_player_id:
                 player_id = provided_player_id
@@ -249,8 +247,7 @@ async def websocket_endpoint(ws: WebSocket, room_id: str):
 
         elif msg.type == "rejoin":
             # Reconnecting with existing player_id
-            raw_data = json.loads(raw)
-            player_id = raw_data.get("player_id")
+            player_id = msg.player_id
             if not player_id:
                 await ws.send_json({"type": "error", "error": "Player ID required for rejoin."})
                 await ws.close()
@@ -285,8 +282,6 @@ async def websocket_endpoint(ws: WebSocket, room_id: str):
             raw = await ws.receive_text()
             try:
                 msg = ClientMessage.model_validate_json(raw)
-                # Also parse raw for extra fields
-                raw_data = json.loads(raw)
             except Exception as e:
                 await ws.send_json({"type": "error", "error": f"Invalid message: {e}"})
                 continue
@@ -295,7 +290,7 @@ async def websocket_endpoint(ws: WebSocket, room_id: str):
                 await ws.send_json({"type": "pong"})
                 continue
 
-            await handle_message(ws, room_id, player_id, msg, raw_data)
+            await handle_message(ws, room_id, player_id, msg)
 
     except WebSocketDisconnect:
         logger.info(f"WebSocket disconnected: player={player_id}, room={room_id}")
@@ -311,9 +306,31 @@ async def websocket_endpoint(ws: WebSocket, room_id: str):
 
 async def handle_message(
     ws: WebSocket, room_id: str, player_id: str,
-    msg: ClientMessage, raw_data: dict
+    msg: ClientMessage,
 ):
     """Process a game action message from a client."""
+    # Acquire per-room lock to prevent concurrent state mutations
+    lock = await room_manager.get_lock(room_id)
+    async with lock:
+        await _handle_message_inner(ws, room_id, player_id, msg)
+
+
+async def _handle_message_inner(
+    ws: WebSocket, room_id: str, player_id: str,
+    msg: ClientMessage,
+):
+    """Inner message handler, called under the room lock."""
+    from handlers.playing import handle_play_card
+    from handlers.bidding import (
+        handle_bid, handle_pass, handle_select_trump,
+        handle_challenge_accept, handle_challenge_bid,
+        handle_challenge_pass, handle_select_bherus
+    )
+    from handlers.room import (
+        handle_configure, handle_start_game, handle_restart,
+        handle_remove_player, handle_update_ping
+    )
+
     game = await room_manager.get_room(room_id)
     if not game:
         await ws.send_json({"type": "error", "error": "Room not found."})
@@ -327,199 +344,33 @@ async def handle_message(
     seat = player.seat
 
     if msg.type == "configure":
-        error = await room_manager.configure_room(
-            room_id, player_id,
-            player_count=msg.player_count,
-            deck_count=msg.deck_count,
-        )
-        if error:
-            await ws.send_json({"type": "error", "error": error})
-            return
-        await _broadcast_full_state(room_id, game)
-
+        await handle_configure(ws, room_id, player_id, msg, game, _broadcast_full_state)
     elif msg.type == "start_game":
-        error = await room_manager.start_game(room_id, player_id)
-        if error:
-            await ws.send_json({"type": "error", "error": error})
-            return
-        await _broadcast_full_state(room_id, game)
-
+        await handle_start_game(ws, room_id, player_id, msg, game, _broadcast_full_state)
     elif msg.type == "bid":
-        if msg.amount is None:
-            await ws.send_json({"type": "error", "error": "Bid amount required."})
-            return
-        error = validate_bid(game, seat, msg.amount)
-        if error:
-            await ws.send_json({"type": "error", "error": error})
-            return
-        place_bid(game, seat, msg.amount)
-        await room_manager.save_room(room_id, game)
-        await _broadcast_full_state(room_id, game)
-
+        await handle_bid(ws, room_id, seat, msg, game, _broadcast_full_state)
     elif msg.type == "pass":
-        if game.status != GameStatus.BIDDING or game.turn_seat != seat:
-            await ws.send_json({"type": "error", "error": "Cannot pass right now."})
-            return
-        pass_bid(game, seat)
-        await room_manager.save_room(room_id, game)
-        await _broadcast_full_state(room_id, game)
-
+        await handle_pass(ws, room_id, seat, msg, game, _broadcast_full_state)
     elif msg.type == "select_trump":
-        if not msg.suit:
-            await ws.send_json({"type": "error", "error": "Suit required."})
-            return
-        error = validate_trump(game, seat, msg.suit)
-        if error:
-            await ws.send_json({"type": "error", "error": error})
-            return
-        select_trump(game, seat, msg.suit)
-        await room_manager.save_room(room_id, game)
-        await _broadcast_full_state(room_id, game)
-
-        # If we entered challenge phase, start auto-expire timer
-        if game.status == GameStatus.TRUMP_CHALLENGE:
-            import asyncio
-            async def _auto_expire_challenge():
-                await asyncio.sleep(10)
-                g = await room_manager.get_room(room_id)
-                if g is None:
-                    return
-                if g.status == GameStatus.TRUMP_CHALLENGE and g.challenge_duel_seats is None:
-                    expire_trump_challenge(g)
-                    await room_manager.save_room(room_id, g)
-                    await _broadcast_full_state(room_id, g)
-            task = asyncio.create_task(_auto_expire_challenge())
-            background_tasks.add(task)
-            task.add_done_callback(background_tasks.discard)
-
+        await handle_select_trump(ws, room_id, seat, msg, game, _broadcast_full_state)
     elif msg.type == "challenge_accept":
-        error = validate_challenge_accept(game, seat)
-        if error:
-            await ws.send_json({"type": "error", "error": error})
-            return
-        accept_challenge(game, seat)
-        await room_manager.save_room(room_id, game)
-        await _broadcast_full_state(room_id, game)
-
+        await handle_challenge_accept(ws, room_id, seat, msg, game, _broadcast_full_state)
     elif msg.type == "challenge_bid":
-        error = validate_challenge_bid(game, seat)
-        if error:
-            await ws.send_json({"type": "error", "error": error})
-            return
-        place_challenge_bid(game, seat)
-        await room_manager.save_room(room_id, game)
-        await _broadcast_full_state(room_id, game)
-
+        await handle_challenge_bid(ws, room_id, seat, msg, game, _broadcast_full_state)
     elif msg.type == "challenge_pass":
-        error = validate_challenge_pass(game, seat)
-        if error:
-            await ws.send_json({"type": "error", "error": error})
-            return
-        pass_challenge_bid(game, seat)
-        await room_manager.save_room(room_id, game)
-        await _broadcast_full_state(room_id, game)
-
+        await handle_challenge_pass(ws, room_id, seat, msg, game, _broadcast_full_state)
     elif msg.type == "select_bherus":
-        calls = msg.calls or []
-        error = validate_bheru_calls(game, seat, calls)
-        if error:
-            await ws.send_json({"type": "error", "error": error})
-            return
-        assign_bherus(game, seat, calls)
-        await room_manager.save_room(room_id, game)
-        await _broadcast_full_state(room_id, game)
-
+        await handle_select_bherus(ws, room_id, seat, msg, game, _broadcast_full_state)
     elif msg.type == "play_card":
-        if not msg.rank or not msg.suit:
-            await ws.send_json({"type": "error", "error": "Card rank and suit required."})
-            return
-        card = Card(
-            rank=msg.rank,
-            suit=msg.suit,
-            deck_index=raw_data.get("deck_index", 0),
-        )
-        error = validate_play(game, seat, card)
-        if error:
-            await ws.send_json({"type": "error", "error": error})
-            return
-            
-        trick_completed = play_card(game, seat, card, auto_resolve=False)
-        await room_manager.save_room(room_id, game)
-        
-        # Broadcast the full state including the 4th card
-        await _broadcast_full_state(room_id, game)
-        
-        if trick_completed:
-            import asyncio
-            # First 2s delay: cards sit on the table
-            await asyncio.sleep(2.0)
-
-            # Evaluate winner
-            from game_engine import _determine_trick_winner
-            cards_played = game.trick.cards_played
-            lead_suit = game.trick.lead_suit
-            trump = game.trump_suit
-            winner_entry = _determine_trick_winner(cards_played, lead_suit, trump)
-            winner_seat = winner_entry.seat
-            winner_name = game.players[winner_seat].name
-            points = sum(tp.card.points() for tp in cards_played)
-            
-            # Broadcast the popup
-            await ws_manager.broadcast(room_id, {
-                "type": "trick_winner",
-                "name": winner_name,
-                "points": points
-            })
-            
-            # Second 2s delay: popup shows
-            await asyncio.sleep(2.0)
-
-            # Resolve trick and start next turn
-            resolve_trick(game)
-            await room_manager.save_room(room_id, game)
-            await _broadcast_full_state(room_id, game)
-
+        await handle_play_card(ws, room_id, seat, msg, game, _broadcast_full_state)
     elif msg.type == "restart":
-        error = await room_manager.restart_game(room_id, player_id)
-        if error:
-            await ws.send_json({"type": "error", "error": error})
-            return
-        await _broadcast_full_state(room_id, game)
-
-    elif msg.type == "update_ping":
-        if msg.ping_ms is not None:
-            player.ping_ms = msg.ping_ms
-            await ws_manager.broadcast(room_id, {
-                "type": "ping_update",
-                "player_id": player_id,
-                "ping_ms": player.ping_ms
-            })
-
+        await handle_restart(ws, room_id, player_id, msg, game, _broadcast_full_state)
     elif msg.type == "remove_player":
-        target_id = raw_data.get("target_player_id")
-        if not target_id:
-            await ws.send_json({"type": "error", "error": "Target player ID required."})
-            return
-        error = await room_manager.remove_player(room_id, player_id, target_id)
-        if error:
-            await ws.send_json({"type": "error", "error": error})
-            return
-            
-        # If the target is currently connected, gracefully disconnect them
-        target_ws = ws_manager.get_ws(target_id)
-        if target_ws:
-            try:
-                await target_ws.send_json({"type": "error", "error": "You have been kicked by the host."})
-                await target_ws.close()
-            except Exception:
-                pass
-            ws_manager.remove(target_id)
-            
-        await _broadcast_full_state(room_id, game)
-
+        await handle_remove_player(ws, room_id, player_id, msg, game, _broadcast_full_state)
+    elif msg.type == "update_ping":
+        await handle_update_ping(ws, room_id, player_id, msg, game)
     else:
         await ws.send_json({"type": "error", "error": f"Unknown message type: {msg.type}"})
-
 
 async def _broadcast_full_state(room_id: str, game) -> None:
     """Send personalized game state to all players in the room."""

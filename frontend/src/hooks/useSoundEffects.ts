@@ -21,9 +21,10 @@ bidClickAudio.preload = "auto";
 
 const playSound = (audioNode: HTMLAudioElement) => {
   try {
-    const clone = audioNode.cloneNode() as HTMLAudioElement;
-    clone.volume = 0.8;
-    clone.play().catch(e => {
+    // Reset and replay the same instance instead of cloning (prevents DOM node leaks)
+    audioNode.currentTime = 0;
+    audioNode.volume = 0.8;
+    audioNode.play().catch(e => {
       // Browsers may block audio without user interaction
       console.warn("Audio play failed (interaction required?):", e);
     });

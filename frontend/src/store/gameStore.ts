@@ -5,6 +5,17 @@ import type {
   BheruCall,
 } from "../types/game";
 
+// Connection callback stored outside React lifecycle
+let _connectCallback: ((roomId: string, playerId: string | null, name: string) => void) | null = null;
+
+export function setConnectCallback(fn: typeof _connectCallback) {
+  _connectCallback = fn;
+}
+
+export function getConnectCallback() {
+  return _connectCallback;
+}
+
 interface GameStore {
   // Connection
   isConnected: boolean;
@@ -63,6 +74,9 @@ interface GameStore {
   // Actions
   reset: () => void;
   leaveRoom: () => void;
+
+  // Connect to a room (replaces window.__kadiConnect)
+  connectToRoom: (roomId: string, playerId: string | null, name: string) => void;
 
   // Send function reference (set by the App component)
   sendFn: ((data: Record<string, unknown>) => void) | null;
@@ -205,6 +219,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       bheruTabSuit: "S",
       selectedBheruCalls: [],
     });
+  },
+
+  // Connect to a room
+  connectToRoom: (roomId, playerId, name) => {
+    const cb = getConnectCallback();
+    if (cb) {
+      cb(roomId, playerId, name);
+    }
   },
 
   // Send function

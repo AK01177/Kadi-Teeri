@@ -6,6 +6,7 @@ Manages room lifecycle using Redis for distributed state, falling back to Supaba
 
 from __future__ import annotations
 
+import asyncio
 import random
 import logging
 import json
@@ -23,6 +24,15 @@ logger = logging.getLogger("kadi_teeri.room")
 
 class RoomManager:
     """Room management backed by Redis for fast distributed state."""
+
+    def __init__(self):
+        self._room_locks: dict[str, asyncio.Lock] = {}
+
+    async def get_lock(self, room_id: str) -> asyncio.Lock:
+        """Get or create a per-room lock to serialize state mutations."""
+        if room_id not in self._room_locks:
+            self._room_locks[room_id] = asyncio.Lock()
+        return self._room_locks[room_id]
 
     async def _generate_room_id(self) -> str:
         """Generate a unique 6-character room code."""
@@ -72,11 +82,16 @@ class RoomManager:
             
         if supabase:
             try:
-                # In production you'd use a background task for Supabase saving to avoid blocking
-                supabase.table("rooms").upsert({
+                # Run sync Supabase call in thread pool to avoid blocking the event loop
+                loop = asyncio.get_event_loop()
+                data = {
                     "room_code": room_id,
                     "game_state": game.model_dump(mode="json")
-                }).execute()
+                }
+                await loop.run_in_executor(
+                    None,
+                    lambda: supabase.table("rooms").upsert(data).execute()
+                )
             except Exception as e:
                 logger.error(f"Supabase save error for room {room_id}: {e}")
 
@@ -85,7 +100,11 @@ class RoomManager:
             await redis_client.redis_client.delete(f"room:{room_id}")
         if supabase:
             try:
-                supabase.table("rooms").delete().eq("room_code", room_id).execute()
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(
+                    None,
+                    lambda: supabase.table("rooms").delete().eq("room_code", room_id).execute()
+                )
             except Exception as e:
                 logger.error(f"Supabase delete error for room {room_id}: {e}")
 
@@ -114,7 +133,7 @@ class RoomManager:
                 Player(id=player_id, name=player_name, seat=0, is_host=True)
             ],
         )
-        game.log.append("Room created.")
+        game.add_log("Room created.")
 
         await self.save_room(room_id, game)
         await self.set_player_room(player_id, room_id)
@@ -135,7 +154,7 @@ class RoomManager:
             existing.is_connected = True
             existing.name = player_name
             await self.set_player_room(player_id, room_id)
-            game.log.append(f"{player_name} reconnected.")
+            game.add_log(f"{player_name} reconnected.")
             logger.info(f"Player {player_name} reconnected to room {room_id}")
             await self.save_room(room_id, game)
             return None, game
@@ -151,7 +170,7 @@ class RoomManager:
         game.players.append(player)
         await self.set_player_room(player_id, room_id)
 
-        game.log.append(f"{player_name} joined the room.")
+        game.add_log(f"{player_name} joined the room.")
         logger.info(f"Player {player_name} joined room {room_id} at seat {seat}")
         
         await self.save_room(room_id, game)
@@ -177,7 +196,7 @@ class RoomManager:
             game.players = [p for p in game.players if p.id != player_id]
             for i, p in enumerate(game.players):
                 p.seat = i
-            game.log.append(f"{player.name} left the room.")
+            game.add_log(f"{player.name} left the room.")
 
             if not game.players:
                 await self.delete_room(room_id)
@@ -187,10 +206,10 @@ class RoomManager:
 
             if player.is_host and game.players:
                 game.players[0].is_host = True
-                game.log.append(f"{game.players[0].name} is now the host.")
+                game.add_log(f"{game.players[0].name} is now the host.")
         else:
             player.is_connected = False
-            game.log.append(f"{player.name} disconnected.")
+            game.add_log(f"{player.name} disconnected.")
             if player.is_host:
                 self._transfer_host(game)
 
@@ -209,7 +228,7 @@ class RoomManager:
         for p in game.players:
             if p.is_connected:
                 p.is_host = True
-                game.log.append(f"{p.name} is now the host.")
+                game.add_log(f"{p.name} is now the host.")
                 break
 
     async def configure_room(
@@ -233,11 +252,11 @@ class RoomManager:
             if player_count < len(game.players):
                 return f"Cannot reduce below current player count ({len(game.players)})."
             game.config.player_count = player_count
-            game.log.append(f"Player count set to {player_count}.")
+            game.add_log(f"Player count set to {player_count}.")
 
             if player_count >= 9 and game.config.deck_count < 2:
                 game.config.deck_count = 2
-                game.log.append("Deck count auto-set to 2 (required for 9+ players).")
+                game.add_log("Deck count auto-set to 2 (required for 9+ players).")
 
         if deck_count is not None:
             if deck_count not in (1, 2):
@@ -245,7 +264,7 @@ class RoomManager:
             if deck_count == 1 and game.config.player_count >= 9:
                 return "2 decks required for 9+ players."
             game.config.deck_count = deck_count
-            game.log.append(f"Deck count set to {deck_count}.")
+            game.add_log(f"Deck count set to {deck_count}.")
 
         await self.save_room(room_id, game)
         return None
@@ -301,7 +320,7 @@ class RoomManager:
         
         for i, p in enumerate(game.players):
             p.seat = i
-        game.log.append(f"{target.name} was removed by the host.")
+        game.add_log(f"{target.name} was removed by the host.")
 
         if game.status != GameStatus.LOBBY:
             game.status = GameStatus.LOBBY
@@ -310,7 +329,7 @@ class RoomManager:
             game.hands = {}
             game.captured = {}
             game.bherus = []
-            game.log.append("Game aborted because a player was removed.")
+            game.add_log("Game aborted because a player was removed.")
 
         await self.save_room(room_id, game)
         return None

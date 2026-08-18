@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from "react";
-import { useGameStore } from "./store/gameStore";
+import { useGameStore, setConnectCallback } from "./store/gameStore";
 import { useWebSocket } from "./hooks/useWebSocket";
 import type { ServerMessage } from "./types/game";
 
@@ -18,6 +18,7 @@ const WS_BASE =
 
 function App() {
   const {
+    playerId,
     roomId,
     gameState,
     toast,
@@ -74,7 +75,18 @@ function App() {
 
   const { send, isConnected, connect, disconnect } = useWebSocket({
     onMessage,
-    onConnect: () => setConnected(true),
+    onConnect: () => {
+      setConnected(true);
+      // Auto-rejoin on reconnect (Fix #7: use onConnect instead of setTimeout race)
+      const state = useGameStore.getState();
+      if (state.playerId && state.roomId && state.gameState) {
+        send({
+          type: "rejoin",
+          name: state.playerName || "Player",
+          player_id: state.playerId,
+        });
+      }
+    },
     onDisconnect: () => setConnected(false),
   });
 
@@ -83,42 +95,22 @@ function App() {
     setSendFn(send);
   }, [send, setSendFn]);
 
-  // Auto-rejoin on reconnect
+  // Register the connectToRoom callback (Fix #6: replaces window.__kadiConnect)
   useEffect(() => {
-    if (isConnected) {
-      const state = useGameStore.getState();
-      // If we already have a playerId and gameState, it means we were in a session and just reconnected
-      if (state.playerId && state.roomId && state.gameState && send) {
-        send({
-          type: "rejoin",
-          name: state.playerName || "Player",
-          player_id: state.playerId,
-        });
-      }
-    }
-  }, [isConnected, send]);
-
-  // Expose connect function for HomePage
-  useEffect(() => {
-    (window as any).__kadiConnect = (
-      roomIdToJoin: string,
-      playerId: string | null,
-      name: string
-    ) => {
+    setConnectCallback((roomIdToJoin, pid, name) => {
       const wsUrl = `${WS_BASE}/ws/${roomIdToJoin}`;
       connect(wsUrl);
 
       // Send join message once connected
       const interval = setInterval(() => {
         const joinMsg: Record<string, unknown> = {
-          type: playerId ? "rejoin" : "join",
+          type: pid ? "rejoin" : "join",
           name,
         };
-        if (playerId) {
-          joinMsg.player_id = playerId;
+        if (pid) {
+          joinMsg.player_id = pid;
         }
-        // Cast to any since the type signature in the store might not include the quiet flag or boolean return
-        const success = (send as any)(joinMsg, true);
+        const success = send(joinMsg, true);
         if (success) {
           clearInterval(interval);
         }
@@ -126,10 +118,10 @@ function App() {
 
       // Timeout after 5 seconds
       setTimeout(() => clearInterval(interval), 5000);
-    };
+    });
 
     return () => {
-      delete (window as any).__kadiConnect;
+      setConnectCallback(null);
     };
   }, [connect, send]);
 
@@ -143,14 +135,21 @@ function App() {
           const wsUrl = `${WS_BASE}/ws/${session.roomId}`;
           connect(wsUrl);
 
-          // Send rejoin once connected
-          setTimeout(() => {
-            send({
-              type: "rejoin",
-              name: session.playerName,
-              player_id: session.playerId,
-            });
-          }, 500);
+          // Send rejoin once connected (polling pattern — onConnect will also handle this)
+          const interval = setInterval(() => {
+            const success = send(
+              {
+                type: "rejoin",
+                name: session.playerName,
+                player_id: session.playerId,
+              },
+              true
+            );
+            if (success) {
+              clearInterval(interval);
+            }
+          }, 200);
+          setTimeout(() => clearInterval(interval), 5000);
         }
       }
     } catch {
@@ -239,8 +238,7 @@ function App() {
           <div className="leaderboard">
             {gameState.players.map((p) => {
               const w = wins[p.id] || 0;
-              const isMe =
-                p.id === useGameStore.getState().playerId;
+              const isMe = p.id === playerId;
               return (
                 <span
                   key={p.id}

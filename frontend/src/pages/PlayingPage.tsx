@@ -5,6 +5,7 @@ import { GameTable } from "../components/GameTable";
 import { GameTable3D } from "../components/GameTable3D";
 import { Hand } from "../components/Hand";
 import { ActivityLog } from "../components/ActivityLog";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { useSoundEffects } from "../hooks/useSoundEffects";
 
 export function PlayingPage() {
@@ -52,17 +53,27 @@ export function PlayingPage() {
 
   if (is3DView) {
     return (
-      <GameTable3D
-        game={game}
-        mySeat={seat}
-        showTrick
-        hand={hand}
-        legalCards={legalCards}
-        isMyTurn={myTurn}
-        onPlayCard={handlePlayCard}
-        trickWinner={trickWinner}
-        onClose={() => setIs3DView(false)}
-      />
+      <ErrorBoundary
+        fallback={
+          <div style={{ padding: "24px", textAlign: "center", color: "var(--fg)" }}>
+            <h3>3D View Unavailable</h3>
+            <p style={{ color: "var(--muted)", fontSize: "14px" }}>WebGL may not be supported. Switching to 2D.</p>
+            <button className="btn btn-primary btn-sm" onClick={() => setIs3DView(false)}>Switch to 2D</button>
+          </div>
+        }
+      >
+        <GameTable3D
+          game={game}
+          mySeat={seat}
+          showTrick={true}
+          hand={hand}
+          legalCards={legalCards}
+          isMyTurn={myTurn}
+          onPlayCard={handlePlayCard}
+          trickWinner={trickWinner}
+          onClose={() => setIs3DView(false)}
+        />
+      </ErrorBoundary>
     );
   }
 
