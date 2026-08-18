@@ -96,7 +96,7 @@ def test_cannot_nudge_yourself():
 
                     # P1 tries to nudge P1
                     ws1.send_json({"type": "nudge_player", "target_player_id": "p1_id"})
-                    err = ws1.receive_json()
+                    err = _receive_error_event(ws1)
                     assert err["type"] == "error"
                     assert "cannot nudge yourself" in err["error"].lower()
 
@@ -127,7 +127,7 @@ def test_cannot_nudge_inactive_player():
 
                     # Turn is P1 (seat 1). P0 tries to nudge P2 (seat 2, inactive)
                     ws0.send_json({"type": "nudge_player", "target_player_id": "p2_id"})
-                    err = ws0.receive_json()
+                    err = _receive_error_event(ws0)
                     assert err["type"] == "error"
                     assert "not that player's turn" in err["error"].lower()
 

@@ -20,7 +20,8 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uv/bin/uv
 ENV PORT=8000 \
     PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
-    UV_LINK_MODE=copy
+    UV_LINK_MODE=copy \
+    PYTHONPATH=/app/backend
 
 WORKDIR /app
 
@@ -45,4 +46,4 @@ USER appuser
 EXPOSE 8000
 
 # Start Uvicorn server, respecting PORT environment variable for Render compatibility
-CMD ["sh", "-c", "exec /app/.venv/bin/uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "exec /app/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
