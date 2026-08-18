@@ -2,9 +2,9 @@ name: Continuous Integration
 
 on:
   push:
-    branches: [ main, refactor/* ]
+    branches: [ main, refactor/*, feat/* ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, refactor/*, feat/* ]
 
 jobs:
   backend-ci:
