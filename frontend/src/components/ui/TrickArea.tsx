@@ -1,5 +1,5 @@
-import { Card } from "./Card";
-import type { TrickPlay, Player } from "../types/game";
+import { Card } from "../card/Card";
+import type { TrickPlay, Player } from "../../types/game";
 
 interface TrickAreaProps {
   cardsPlayed: TrickPlay[];

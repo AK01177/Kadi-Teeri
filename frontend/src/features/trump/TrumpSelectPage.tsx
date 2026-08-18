@@ -1,8 +1,8 @@
-import { useGameStore } from "../store/gameStore";
-import { SUITS, SUIT_SYMBOLS, SUIT_NAMES } from "../types/game";
-import { GameTable } from "../components/GameTable";
-import { Hand } from "../components/Hand";
-import { ActivityLog } from "../components/ActivityLog";
+import { useGameStore } from "../../store/gameStore";
+import { SUITS, SUIT_SYMBOLS, SUIT_NAMES } from "../../types/game";
+import { GameTable } from "../../components/table/GameTable";
+import { Hand } from "../../components/player/Hand";
+import { ActivityLog } from "../../components/ui/ActivityLog";
 
 export function TrumpSelectPage() {
   const {

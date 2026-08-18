@@ -1,6 +1,6 @@
-import { useGameStore } from "../store/gameStore";
-import { ScoreBar } from "../components/ScoreBar";
-import { ActivityLog } from "../components/ActivityLog";
+import { useGameStore } from "../../store/gameStore";
+import { ScoreBar } from "../../components/ui/ScoreBar";
+import { ActivityLog } from "../../components/ui/ActivityLog";
 
 export function RoundEndPage() {
   const { gameState, isHost, sendFn } = useGameStore();

@@ -1,4 +1,4 @@
-import type { Player, GameState } from "../types/game";
+import type { Player, GameState } from "../../types/game";
 
 interface PlayerSeatProps {
   player: Player;

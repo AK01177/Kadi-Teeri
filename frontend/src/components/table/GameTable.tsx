@@ -1,6 +1,6 @@
-import { PlayerSeat } from "./PlayerSeat";
-import { TrickArea } from "./TrickArea";
-import type { GameState } from "../types/game";
+import { PlayerSeat } from "../player/PlayerSeat";
+import { TrickArea } from "../ui/TrickArea";
+import type { GameState } from "../../types/game";
 interface GameTableProps {
   game: GameState;
   mySeat: number;

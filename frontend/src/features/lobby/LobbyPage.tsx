@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useGameStore } from "../store/gameStore";
+import { useGameStore } from "../../store/gameStore";
 
 const API_BASE =
   import.meta.env.VITE_API_URL || "";

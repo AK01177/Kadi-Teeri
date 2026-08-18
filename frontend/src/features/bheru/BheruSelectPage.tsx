@@ -1,14 +1,14 @@
-import { useGameStore } from "../store/gameStore";
+import { useGameStore } from "../../store/gameStore";
 import {
   SUITS,
   RANKS,
   SUIT_SYMBOLS,
   SUIT_NAMES,
-} from "../types/game";
-import type { BheruCallMode } from "../types/game";
-import { GameTable } from "../components/GameTable";
-import { Hand } from "../components/Hand";
-import { ActivityLog } from "../components/ActivityLog";
+} from "../../types/game";
+import type { BheruCallMode } from "../../types/game";
+import { GameTable } from "../../components/table/GameTable";
+import { Hand } from "../../components/player/Hand";
+import { ActivityLog } from "../../components/ui/ActivityLog";
 
 export function BheruSelectPage() {
   const {

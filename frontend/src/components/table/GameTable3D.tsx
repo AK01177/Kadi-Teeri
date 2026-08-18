@@ -2,10 +2,10 @@ import { Suspense, useMemo, useCallback, useState, useEffect } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { PerspectiveCamera, Html, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import type { GameState, Card as CardType } from "../types/game";
-import { SUIT_SYMBOLS, SUIT_NAMES } from "../types/game";
-import { Card3D } from "./Card3D";
-import { Card } from "./Card";
+import type { GameState, Card as CardType } from "../../types/game";
+import { SUIT_SYMBOLS, SUIT_NAMES } from "../../types/game";
+import { Card3D } from "../card/Card3D";
+import { Card } from "../card/Card";
 import "./GameTable3D.css";
 
 /* ──────────────────────────────────────────────────────────────

@@ -2,7 +2,7 @@ import { useMemo, useEffect, useState } from "react";
 import { useSpring, a } from "@react-spring/three";
 import { useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
-import type { Card as CardType } from "../types/game";
+import type { Card as CardType } from "../../types/game";
 import * as THREE from "three";
 
 interface Card3DProps {

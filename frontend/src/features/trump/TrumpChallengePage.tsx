@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { useGameStore } from "../store/gameStore";
-import { SUIT_SYMBOLS, SUIT_NAMES } from "../types/game";
-import { GameTable } from "../components/GameTable";
-import { Hand } from "../components/Hand";
-import { ActivityLog } from "../components/ActivityLog";
+import { useGameStore } from "../../store/gameStore";
+import { SUIT_SYMBOLS, SUIT_NAMES } from "../../types/game";
+import { GameTable } from "../../components/table/GameTable";
+import { Hand } from "../../components/player/Hand";
+import { ActivityLog } from "../../components/ui/ActivityLog";
 
 export function TrumpChallengePage() {
   const { gameState, hand, seat, sendFn } = useGameStore();

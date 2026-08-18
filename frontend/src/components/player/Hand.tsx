@@ -1,5 +1,5 @@
-import { Card } from "./Card";
-import type { Card as CardType } from "../types/game";
+import { Card } from "../card/Card";
+import type { Card as CardType } from "../../types/game";
 
 interface HandProps {
   cards: CardType[];
