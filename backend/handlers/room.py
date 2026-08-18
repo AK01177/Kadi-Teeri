@@ -15,21 +15,27 @@ async def handle_configure(ws: WebSocket, room_id: str, player_id: str, msg: Cli
     if error:
         await ws.send_json({"type": "error", "error": error})
         return
-    await broadcast_fn(room_id, game)
+    updated = await room_manager.get_room(room_id)
+    if updated:
+        await broadcast_fn(room_id, updated)
 
 async def handle_start_game(ws: WebSocket, room_id: str, player_id: str, msg: ClientMessage, game: GameState, broadcast_fn):
     error = await room_manager.start_game(room_id, player_id)
     if error:
         await ws.send_json({"type": "error", "error": error})
         return
-    await broadcast_fn(room_id, game)
+    updated = await room_manager.get_room(room_id)
+    if updated:
+        await broadcast_fn(room_id, updated)
 
 async def handle_restart(ws: WebSocket, room_id: str, player_id: str, msg: ClientMessage, game: GameState, broadcast_fn):
     error = await room_manager.restart_game(room_id, player_id)
     if error:
         await ws.send_json({"type": "error", "error": error})
         return
-    await broadcast_fn(room_id, game)
+    updated = await room_manager.get_room(room_id)
+    if updated:
+        await broadcast_fn(room_id, updated)
 
 async def handle_remove_player(ws: WebSocket, room_id: str, player_id: str, msg: ClientMessage, game: GameState, broadcast_fn):
     target_id = msg.target_player_id
@@ -40,7 +46,9 @@ async def handle_remove_player(ws: WebSocket, room_id: str, player_id: str, msg:
     if error:
         await ws.send_json({"type": "error", "error": error})
         return
-    await broadcast_fn(room_id, game)
+    updated = await room_manager.get_room(room_id)
+    if updated:
+        await broadcast_fn(room_id, updated)
 
 async def handle_update_ping(ws: WebSocket, room_id: str, player_id: str, msg: ClientMessage, game: GameState):
     player = next((p for p in game.players if p.id == player_id), None)

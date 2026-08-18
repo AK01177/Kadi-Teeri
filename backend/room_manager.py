@@ -252,22 +252,17 @@ class RoomManager:
         return await self.leave_room(player_id)
 
     def _ensure_host(self, game: GameState) -> None:
-        """Ensure there is exactly one connected host, if anyone is connected."""
-        if not any(p.is_connected for p in game.players):
-            if not any(p.is_host for p in game.players) and game.players:
-                game.players[0].is_host = True
+        """Ensure there is exactly one host. We do not care if they are connected."""
+        if any(p.is_host for p in game.players):
+            hosts = [p for p in game.players if p.is_host]
+            if len(hosts) > 1:
+                for p in hosts[1:]:
+                    p.is_host = False
             return
 
-        if any(p.is_host and p.is_connected for p in game.players):
-            return
-
-        for p in game.players:
-            p.is_host = False
-        for p in game.players:
-            if p.is_connected:
-                p.is_host = True
-                game.add_log(f"{p.name} is now the host.")
-                break
+        if game.players:
+            game.players[0].is_host = True
+            game.add_log(f"{game.players[0].name} is now the host.")
 
     async def configure_room(
         self, room_id: str, player_id: str,
