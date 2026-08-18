@@ -12,7 +12,7 @@ Kadi Teeri Online allows 4 to 12 players to create or join private rooms to play
 
 ## Features
 
-- **Room-Based Matchmaking**: Create private rooms with a shareable 4-character room code.
+- **Room-Based Matchmaking**: Create private rooms with a shareable 6-character room code.
 - **Flexible Configuration**: Supports 4 to 12 players and 1 or 2 card decks.
 - **Real-Time Gameplay**: Synchronized game state across all clients with WebSockets.
 - **Resilient Connections**: Reconnection handling that restores player hands and state if disconnected.

@@ -76,10 +76,10 @@ class RoomManager:
             logger.error(f"Failed to delete room {room_id} from Supabase: {e}")
 
     def _generate_code(self) -> str:
-        """Generate a 4-letter room code (uppercase)."""
+        """Generate a 6-letter room code (uppercase)."""
         chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
         while True:
-            code = "".join(random.choices(chars, k=4))
+            code = "".join(random.choices(chars, k=6))
             if code not in self._rooms:
                 return code
 

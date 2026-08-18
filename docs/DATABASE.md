@@ -27,7 +27,7 @@ Kadi Teeri Online operates primarily as an **in-memory active state server**, wi
 ## 2. In-Memory State Model
 
 Active game state is managed in-memory inside `RoomManager`:
-- `_rooms`: Mapping of `room_code` (4-character uppercase string) -> `GameState` Pydantic model.
+- `_rooms`: Mapping of `room_code` (6-character uppercase string) -> `GameState` Pydantic model.
 - `_player_rooms`: Reverse lookup mapping `player_id` (UUID string) -> `room_code`.
 
 If Supabase environment variables (`SUPABASE_URL`, `SUPABASE_KEY`) are missing, the server runs completely in-memory without error.
