@@ -7,11 +7,11 @@ The WebSocket handler processes all game actions.
 
 from __future__ import annotations
 
-import os
 import json
 import logging
-import uuid
+import os
 import sys
+import uuid
 from contextlib import asynccontextmanager
 
 # Ensure backend directory is in sys.path for both root and sub-dir execution

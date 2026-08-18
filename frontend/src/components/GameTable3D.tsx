@@ -158,10 +158,11 @@ export function GameTable3D({
   /* ═══════════════════════════════════════════
      Trick card layout — spread in the centre
      ═══════════════════════════════════════════ */
-  const cardsPlayed = game.trick?.cards_played || [];
+  const trickCardsPlayed = game.trick?.cards_played;
 
   const trickLayout = useMemo(() => {
-    const count = cardsPlayed.length;
+    const cards = trickCardsPlayed || [];
+    const count = cards.length;
     if (count === 0) return [];
 
     // On mobile, tighter spacing so cards fit the smaller visible area
@@ -171,7 +172,7 @@ export function GameTable3D({
     const totalWidth = (count - 1) * spacing;
     const startX = -totalWidth / 2;
 
-    return cardsPlayed.map((play, i) => ({
+    return cards.map((play, i) => ({
       play,
       position: [
         startX + i * spacing,
@@ -184,7 +185,7 @@ export function GameTable3D({
         (i - (count - 1) / 2) * 0.06,
       ] as [number, number, number],
     }));
-  }, [cardsPlayed, isMobile]);
+  }, [trickCardsPlayed, isMobile]);
 
   /* ═══════════════════════════════════════════
      Legal card set for hand rendering

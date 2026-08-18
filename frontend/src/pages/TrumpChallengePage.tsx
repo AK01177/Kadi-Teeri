@@ -6,24 +6,16 @@ import { Hand } from "../components/Hand";
 import { ActivityLog } from "../components/ActivityLog";
 
 export function TrumpChallengePage() {
-  const { gameState, hand, seat, sendFn } =
-    useGameStore();
+  const { gameState, hand, seat, sendFn } = useGameStore();
 
-  if (!gameState || seat === null) return null;
-
-  const game = gameState;
-  const seatLabel = (s: number) => game.players[s]?.name || `Seat ${s}`;
-
-  const isDuelActive = game.challenge_duel_seats !== null;
-  const isInDuel = isDuelActive && game.challenge_duel_seats!.includes(seat);
-  const isMyTurnInDuel = isDuelActive && game.turn_seat === seat && isInDuel;
-  const iAmBidder = game.bidder_seat === seat;
+  const isDuelActive = gameState?.challenge_duel_seats != null;
+  const deadline = gameState?.challenge_deadline;
 
   // ─── Countdown Timer ───
   const [countdown, setCountdown] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!game.challenge_deadline || isDuelActive) {
+    if (!deadline || isDuelActive) {
       setCountdown(null);
       return;
     }
@@ -31,7 +23,7 @@ export function TrumpChallengePage() {
     const tick = () => {
       const remaining = Math.max(
         0,
-        Math.ceil(game.challenge_deadline! - Date.now() / 1000)
+        Math.ceil(deadline - Date.now() / 1000)
       );
       setCountdown(remaining);
     };
@@ -39,7 +31,7 @@ export function TrumpChallengePage() {
     tick();
     const interval = setInterval(tick, 250);
     return () => clearInterval(interval);
-  }, [game.challenge_deadline, isDuelActive]);
+  }, [deadline, isDuelActive]);
 
   // ─── Actions ───
   const handleChallenge = useCallback(() => {
@@ -53,6 +45,14 @@ export function TrumpChallengePage() {
   const handleDuelPass = useCallback(() => {
     sendFn?.({ type: "challenge_pass" });
   }, [sendFn]);
+
+  if (!gameState || seat === null) return null;
+
+  const game = gameState;
+  const seatLabel = (s: number) => game.players[s]?.name || `Seat ${s}`;
+  const isInDuel = isDuelActive && game.challenge_duel_seats!.includes(seat);
+  const isMyTurnInDuel = isDuelActive && game.turn_seat === seat && isInDuel;
+  const iAmBidder = game.bidder_seat === seat;
 
   // ─── Phase: Duel winner picks new trump ───
   if (

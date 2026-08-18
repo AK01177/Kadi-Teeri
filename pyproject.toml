@@ -34,4 +34,4 @@ src = ["backend"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
-ignore = []
+ignore = ["E402"]
