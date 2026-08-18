@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from "react";
 import { useGameStore } from "./store/gameStore";
 import { useWebSocket } from "./hooks/useWebSocket";
+import { triggerNudgeAlert } from "./hooks/useSoundEffects";
 import type { ServerMessage } from "./types/game";
 
 import { HomePage } from "./features/HomePage";
@@ -22,6 +23,8 @@ function App() {
     gameState,
     toast,
     clearToast,
+    nudgeToast,
+    clearNudgeToast,
     setIdentity,
     setGameState,
     setConnected,
@@ -68,6 +71,12 @@ function App() {
         case "ping_update":
           useGameStore.getState().setPingUpdate(msg.player_id as string, msg.ping_ms as number);
           break;
+        case "nudge_received": {
+          const senderName = (msg.sender_name as string) || "A player";
+          useGameStore.getState().showNudgeToast(senderName);
+          triggerNudgeAlert();
+          break;
+        }
         case "error":
           showToast(msg.error);
           setIsRefreshing(false);
@@ -381,6 +390,27 @@ function App() {
       {toast && (
         <div className="toast" onClick={clearToast}>
           {toast}
+        </div>
+      )}
+
+      {/* Nudge Toast */}
+      {nudgeToast && (
+        <div
+          className="toast nudge-toast"
+          onClick={clearNudgeToast}
+          style={{
+            borderColor: "rgba(234, 179, 8, 0.6)",
+            background: "rgba(20, 20, 30, 0.95)",
+            boxShadow: "0 0 20px rgba(234, 179, 8, 0.4)",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <span style={{ fontSize: "18px" }}>🔔</span>
+          <span>
+            <strong>{nudgeToast.senderName}</strong> is waiting for you!
+          </span>
         </div>
       )}
     </div>
