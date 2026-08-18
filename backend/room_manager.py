@@ -183,6 +183,7 @@ class RoomManager:
             await self.set_player_room(player_id, room_id)
             game.add_log(f"{player_name} reconnected.")
             logger.info(f"Player {player_name} reconnected to room {room_id}")
+            self._ensure_host(game)
             await self.save_room(room_id, game)
             return None, game
 
@@ -193,14 +194,14 @@ class RoomManager:
             return "Room is full.", None
 
         seat = len(game.players)
-        is_host = (seat == 0)
-        player = Player(id=player_id, name=player_name, seat=seat, is_host=is_host)
+        player = Player(id=player_id, name=player_name, seat=seat, is_host=False)
         game.players.append(player)
         await self.set_player_room(player_id, room_id)
 
         game.add_log(f"{player_name} joined the room.")
         logger.info(f"Player {player_name} joined room {room_id} at seat {seat}")
         
+        self._ensure_host(game)
         await self.save_room(room_id, game)
         return None, game
 
@@ -233,17 +234,14 @@ class RoomManager:
                 logger.info(f"Room {room_id} is now empty (kept alive)")
                 return room_id, None, True
 
-            if player.is_host and game.players:
-                game.players[0].is_host = True
-                game.add_log(f"{game.players[0].name} is now the host.")
+            self._ensure_host(game)
         else:
             player.is_connected = False
             if intentional:
                 game.add_log(f"{player.name} left the room.")
             else:
                 game.add_log(f"{player.name} disconnected.")
-            if player.is_host:
-                self._transfer_host(game)
+            self._ensure_host(game)
 
         await self.clear_player_room(player_id)
         await self.save_room(room_id, game)
@@ -253,8 +251,16 @@ class RoomManager:
         """Handle a player disconnecting."""
         return await self.leave_room(player_id)
 
-    def _transfer_host(self, game: GameState) -> None:
-        """Transfer host to the oldest connected player."""
+    def _ensure_host(self, game: GameState) -> None:
+        """Ensure there is exactly one connected host, if anyone is connected."""
+        if not any(p.is_connected for p in game.players):
+            if not any(p.is_host for p in game.players) and game.players:
+                game.players[0].is_host = True
+            return
+
+        if any(p.is_host and p.is_connected for p in game.players):
+            return
+
         for p in game.players:
             p.is_host = False
         for p in game.players:
