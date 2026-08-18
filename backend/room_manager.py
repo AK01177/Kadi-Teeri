@@ -27,6 +27,8 @@ class RoomManager:
 
     def __init__(self):
         self._room_locks: dict[str, asyncio.Lock] = {}
+        self._local_rooms: dict[str, str] = {}
+        self._local_player_rooms: dict[str, str] = {}
 
     async def get_lock(self, room_id: str) -> asyncio.Lock:
         """Get or create a per-room lock to serialize state mutations."""
@@ -44,7 +46,7 @@ class RoomManager:
                 exists = await redis_client.redis_client.exists(f"room:{code}")
                 if not exists:
                     return code
-            else:
+            elif code not in self._local_rooms:
                 return code
         raise RuntimeError("Could not generate unique room code")
 
@@ -57,14 +59,25 @@ class RoomManager:
                     return GameState.model_validate_json(raw_data)
                 except Exception as e:
                     logger.error(f"Failed to parse room {room_id} from Redis: {e}")
+        elif room_id in self._local_rooms:
+            try:
+                return GameState.model_validate_json(self._local_rooms[room_id])
+            except Exception as e:
+                logger.error(f"Failed to parse room {room_id} from local cache: {e}")
         
         if supabase:
             try:
-                res = supabase.table("rooms").select("*").eq("room_code", room_id).execute()
+                loop = asyncio.get_event_loop()
+                res = await loop.run_in_executor(
+                    None,
+                    lambda: supabase.table("rooms").select("*").eq("room_code", room_id).execute()
+                )
                 if res.data:
                     game = GameState.model_validate(res.data[0]["game_state"])
                     if redis_client.redis_client:
                         await redis_client.redis_client.set(f"room:{room_id}", game.model_dump_json(), ex=86400)
+                    else:
+                        self._local_rooms[room_id] = game.model_dump_json()
                     return game
             except Exception as e:
                 logger.error(f"Fallback DB load failed for room {room_id}: {e}")
@@ -77,18 +90,22 @@ class RoomManager:
 
     async def save_room(self, room_id: str, game: GameState):
         """Save room state to Redis and Supabase."""
+        json_data = game.model_dump_json()
+        
         if redis_client.redis_client:
-            await redis_client.redis_client.set(f"room:{room_id}", game.model_dump_json(), ex=86400)
+            await redis_client.redis_client.set(f"room:{room_id}", json_data, ex=86400)
+        else:
+            self._local_rooms[room_id] = json_data
             
         if supabase:
             try:
-                # Run sync Supabase call in thread pool to avoid blocking the event loop
+                # Run sync Supabase call in thread pool without awaiting to prevent blocking the event loop
                 loop = asyncio.get_event_loop()
                 data = {
                     "room_code": room_id,
                     "game_state": game.model_dump(mode="json")
                 }
-                await loop.run_in_executor(
+                loop.run_in_executor(
                     None,
                     lambda: supabase.table("rooms").upsert(data).execute()
                 )
@@ -98,10 +115,13 @@ class RoomManager:
     async def delete_room(self, room_id: str):
         if redis_client.redis_client:
             await redis_client.redis_client.delete(f"room:{room_id}")
+        if room_id in self._local_rooms:
+            del self._local_rooms[room_id]
+            
         if supabase:
             try:
                 loop = asyncio.get_event_loop()
-                await loop.run_in_executor(
+                loop.run_in_executor(
                     None,
                     lambda: supabase.table("rooms").delete().eq("room_code", room_id).execute()
                 )
@@ -112,15 +132,19 @@ class RoomManager:
         """Get the room ID a player is in from Redis."""
         if redis_client.redis_client:
             return await redis_client.redis_client.get(f"player_room:{player_id}")
-        return None
+        return self._local_player_rooms.get(player_id)
 
     async def set_player_room(self, player_id: str, room_id: str):
         if redis_client.redis_client:
             await redis_client.redis_client.set(f"player_room:{player_id}", room_id, ex=86400)
+        else:
+            self._local_player_rooms[player_id] = room_id
 
     async def clear_player_room(self, player_id: str):
         if redis_client.redis_client:
             await redis_client.redis_client.delete(f"player_room:{player_id}")
+        if player_id in self._local_player_rooms:
+            del self._local_player_rooms[player_id]
 
     async def create_room(self, player_id: str, player_name: str) -> tuple[str, GameState]:
         """Create a new room and add the creator as host."""

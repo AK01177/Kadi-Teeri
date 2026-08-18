@@ -36,7 +36,7 @@ async def handle_remove_player(ws: WebSocket, room_id: str, player_id: str, msg:
     if not target_id:
         await ws.send_json({"type": "error", "error": "Target player ID required."})
         return
-    error = room_manager.remove_player(room_id, player_id, target_id)
+    error = await room_manager.remove_player(room_id, player_id, target_id)
     if error:
         await ws.send_json({"type": "error", "error": error})
         return
