@@ -26,10 +26,10 @@ export function Card({ card, small, disabled, onClick }: CardProps) {
       onClick={disabled ? undefined : onClick}
     >
       <div className={`card-face ${isTeeri ? " teeri" : ""}`} style={{ background: 'transparent', boxShadow: 'none' }}>
-        <img 
-           src={imgSrc} 
-           alt={`${card.rank} of ${suitName}`} 
-           style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} 
+        <img
+          src={imgSrc}
+          alt={`${card.rank} of ${suitName}`}
+          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
         />
         {isTeeri && <span className="teeri-badge">30</span>}
       </div>
@@ -41,10 +41,10 @@ export function CardBack({ small }: { small?: boolean }) {
   return (
     <div className={`card${small ? " card-sm" : ""}`}>
       <div className="card-face" style={{ background: 'transparent', boxShadow: 'none' }}>
-        <img 
-           src="/CardsPNG/back_light.png" 
-           alt="Card Back" 
-           style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} 
+        <img
+          src="/CardsPNG/back_light.png"
+          alt="Card Back"
+          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
         />
       </div>
     </div>
