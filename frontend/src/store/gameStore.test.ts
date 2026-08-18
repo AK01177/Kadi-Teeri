@@ -56,4 +56,20 @@ describe('gameStore', () => {
     expect(updated.roomId).toBe("r1");
     expect(updated.isRefreshing).toBe(false);
   });
+
+  it('should handle isReconnecting state and clear flags on state update', () => {
+    useGameStore.getState().setIsReconnecting(true);
+    expect(useGameStore.getState().isReconnecting).toBe(true);
+
+    const mockGame: any = {
+      status: "lobby",
+      players: [{ id: "p1", name: "Player 1", seat: 0, is_host: true }]
+    };
+
+    useGameStore.getState().setGameState(mockGame);
+
+    const updated = useGameStore.getState();
+    expect(updated.isReconnecting).toBe(false);
+    expect(updated.isRefreshing).toBe(false);
+  });
 });

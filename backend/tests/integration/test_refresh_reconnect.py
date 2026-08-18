@@ -79,3 +79,54 @@ def test_refresh_does_not_mutate_state_or_deal_cards():
         # Ensure bidding is still None and status is still lobby
         assert game.bidding is None
         assert game.status == GameStatus.LOBBY
+
+
+def test_reconnect_rejoin_valid_session():
+    """Verify rejoin restores valid session and correct seat."""
+    resp = client.post("/api/rooms", json={"player_name": "Host"})
+    room_id = resp.json()["room_id"]
+    host_id = resp.json()["player_id"]
+
+    with client.websocket_connect(f"/ws/{room_id}") as ws_p2:
+        ws_p2.send_json({"type": "join", "name": "Player2"})
+        ws_p2.receive_json()  # welcome
+        ws_p2.receive_json()  # game state
+
+        # Host connects
+        with client.websocket_connect(f"/ws/{room_id}") as ws1:
+            ws1.send_json({"type": "join", "name": "Host", "player_id": host_id})
+            w1 = ws1.receive_json()
+            assert w1["seat"] == 0
+
+        # Host disconnects and reconnects (rejoin) while P2 remains connected
+        with client.websocket_connect(f"/ws/{room_id}") as ws2:
+            ws2.send_json({"type": "rejoin", "name": "Host", "player_id": host_id})
+            w2 = ws2.receive_json()
+            assert w2["type"] == "welcome"
+            assert w2["player_id"] == host_id
+            assert w2["seat"] == 0
+
+            state = ws2.receive_json()
+            assert state["type"] == "game_state"
+
+
+def test_reconnect_rejoin_missing_room():
+    """Verify rejoin handles missing room gracefully."""
+    with client.websocket_connect("/ws/NOROOM") as ws:
+        ws.send_json({"type": "rejoin", "name": "Player", "player_id": "some-id"})
+        err = ws.receive_json()
+        assert err["type"] == "error"
+        assert "not found" in err["error"].lower()
+
+
+def test_reconnect_rejoin_invalid_player_id():
+    """Verify rejoin handles missing player_id gracefully."""
+    resp = client.post("/api/rooms", json={"player_name": "Host"})
+    room_id = resp.json()["room_id"]
+
+    with client.websocket_connect(f"/ws/{room_id}") as ws:
+        ws.send_json({"type": "rejoin", "name": "Stranger"})
+        err = ws.receive_json()
+        assert err["type"] == "error"
+        assert "player id required" in err["error"].lower()
+

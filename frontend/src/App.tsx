@@ -78,7 +78,7 @@ function App() {
     [setIdentity, setGameState, showToast, setIsRefreshing, setIsReconnecting]
   );
 
-  const { send, isConnected, connect, disconnect } = useWebSocket({
+  const { send, isConnected, connect, disconnect, reconnect } = useWebSocket({
     onMessage,
     onConnect: () => setConnected(true),
     onDisconnect: () => setConnected(false),
@@ -89,16 +89,26 @@ function App() {
     setSendFn(send);
   }, [send, setSendFn]);
 
-  // Auto-rejoin on reconnect
+  // Auto-rejoin on connect/reconnect
   useEffect(() => {
     if (isConnected) {
       const state = useGameStore.getState();
-      // If we already have a playerId and gameState, it means we were in a session and just reconnected
-      if (state.playerId && state.roomId && state.gameState && send) {
+      const savedStr = localStorage.getItem("kadi_session");
+      let session = null;
+      try {
+        if (savedStr) session = JSON.parse(savedStr);
+      } catch {
+        // ignore
+      }
+      const pid = state.playerId || session?.playerId;
+      const rid = state.roomId || session?.roomId;
+      const name = state.playerName || session?.playerName || "Player";
+
+      if (pid && rid && send) {
         send({
           type: "rejoin",
-          name: state.playerName || "Player",
-          player_id: state.playerId,
+          name,
+          player_id: pid,
         });
       }
     }
@@ -184,6 +194,52 @@ function App() {
       }
     }, 4000);
   }, [isRefreshing, isReconnecting, isConnected, send, setIsRefreshing, showToast]);
+
+  const handleReconnect = useCallback(() => {
+    if (isRefreshing || isReconnecting) return;
+    setIsReconnecting(true);
+
+    const savedStr = localStorage.getItem("kadi_session");
+    let session = null;
+    try {
+      if (savedStr) session = JSON.parse(savedStr);
+    } catch {
+      // ignore
+    }
+    const currentStore = useGameStore.getState();
+    const activeRoomId = currentStore.roomId || session?.roomId;
+    const activePlayerId = currentStore.playerId || session?.playerId;
+
+    if (!activeRoomId || !activePlayerId) {
+      setIsReconnecting(false);
+      showToast("No saved session found.");
+      return;
+    }
+
+    if (isConnected) {
+      const sent = send({ type: "fetch_state" });
+      if (!sent) {
+        const wsUrl = `${WS_BASE}/ws/${activeRoomId}`;
+        reconnect(wsUrl);
+      }
+      setTimeout(() => {
+        if (useGameStore.getState().isReconnecting) {
+          setIsReconnecting(false);
+        }
+      }, 3000);
+      return;
+    }
+
+    const wsUrl = `${WS_BASE}/ws/${activeRoomId}`;
+    reconnect(wsUrl);
+
+    setTimeout(() => {
+      if (useGameStore.getState().isReconnecting) {
+        setIsReconnecting(false);
+        showToast("Reconnect request timed out.");
+      }
+    }, 5000);
+  }, [isRefreshing, isReconnecting, isConnected, send, reconnect, setIsReconnecting, showToast]);
 
   const handleLeave = () => {
     disconnect();
@@ -286,6 +342,14 @@ function App() {
             title="Re-fetch latest room state & re-render UI"
           >
             {isRefreshing ? "Refreshing…" : "Refresh"}
+          </button>
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={handleReconnect}
+            disabled={isRefreshing || isReconnecting}
+            title="Re-establish network connection & session"
+          >
+            {isReconnecting ? "Reconnecting…" : "Reconnect"}
           </button>
           <button
             className="btn btn-ghost btn-sm"
