@@ -45,4 +45,4 @@ USER appuser
 EXPOSE 8000
 
 # Start Uvicorn server, respecting PORT environment variable for Render compatibility
-CMD ["sh", "-c", "exec /app/.venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "exec /app/.venv/bin/uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

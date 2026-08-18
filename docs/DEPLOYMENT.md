@@ -21,7 +21,7 @@ No external frontend hosting service or separate web server (e.g. Nginx) is need
    ```
 2. **Start Command**:
    ```bash
-   cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+   cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
    ```
 
 ### Option B: Web Service (Docker)
@@ -36,23 +36,23 @@ The production `Dockerfile` uses multi-stage builds:
 
 ```dockerfile
 # Stage 1: Build Frontend
-FROM node:20-alpine AS builder
+FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
 # Stage 2: Serve Backend + Static
-FROM python:3.11-slim
+FROM python:3.12-slim AS runtime
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uv/bin/uv
 RUN /uv/bin/uv sync --frozen --no-dev
-COPY backend/ ./backend
-COPY --from=builder /app/backend/static /app/backend/static
+COPY backend/ ./backend/
+COPY --from=frontend-builder /app/backend/static /app/backend/static
 EXPOSE 8000
-CMD ["/app/.venv/bin/uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "exec /app/.venv/bin/uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
 ```
 
 ## 4. Environment Variables in Production

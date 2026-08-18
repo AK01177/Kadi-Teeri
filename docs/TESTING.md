@@ -1,54 +1,67 @@
-# Testing Guide
+# Testing Strategy & Structure
 
-This document describes the testing structure, execution instructions, and test coverage strategy for **Kadi Teeri Online**.
+This document outlines the testing strategy, framework setup, and test suite organization for **Kadi Teeri Online**.
 
-## 1. Overview
+---
 
-The codebase includes automated tests for both backend game engine logic and frontend UI/store components.
+## 1. Test Architecture
 
+The repository enforces automated testing across both backend and frontend layers:
+
+```text
+backend/tests/
+├── unit/                       # Unit tests for pure domain logic
+│   ├── test_deck.py            # Deck balancing, shuffling, dealing
+│   ├── test_bidding.py         # Bidding turn rotation and validation
+│   ├── test_trump.py           # Trump selection and challenge duels
+│   ├── test_bheru_calls.py     # Partner call validation and reveal logic
+│   └── test_trick.py           # Legal plays and 2-deck duplicate winner resolution
+├── integration/                # Integration tests for full flows
+│   ├── test_game_mechanics.py  # End-to-end round execution and state transitions
+│   ├── test_remove_player_bug.py # Player kick/disconnect logic
+│   └── test_ws_api.py          # WebSocket connection, REST endpoints, and messaging
+└── conftest.py                 # Shared pytest fixtures
+
+frontend/src/store/
+└── gameStore.test.ts          # Vitest unit tests for Zustand state management
 ```
-tests/
-├── backend/
-│   ├── test_game_engine.py       # Core rules, bidding, card rank, 2-deck duplicates
-│   ├── test_bheru_calls.py       # Partner call validation, mode checking
-│   ├── test_remove_player_bug.py # Disconnect, kick player, room reset safety
-│   └── test_ws_api.py            # REST endpoints, room creation, WebSocket lifecycle
-└── frontend/
-    └── src/store/gameStore.test.ts # Zustand state store mutations and state handling
-```
 
-## 2. Running Backend Tests
+---
 
-Backend tests are written using `pytest` and `httpx`.
+## 2. Running Tests
+
+### Backend Test Suite (Pytest)
+
+Run all backend tests using `uv`:
 
 ```bash
-# Using uv (recommended)
 uv run pytest backend/tests
-
-# Verbose output
-uv run pytest backend/tests -v
 ```
 
-## 3. Running Frontend Tests
+Run specific test sub-suites:
 
-Frontend tests are written using `vitest`.
+```bash
+# Unit tests only
+uv run pytest backend/tests/unit
+
+# Integration tests only
+uv run pytest backend/tests/integration
+```
+
+### Frontend Test Suite (Vitest)
+
+Run frontend unit tests using Vitest:
 
 ```bash
 cd frontend
-
-# Run unit tests
 npm test
-
-# Run vitest in watch mode
-npx vitest
 ```
 
-## 4. Test Coverage Areas
+---
 
-Key scenarios covered by tests:
+## 3. Test Coverage Highlights
 
-1. **Deck Balancing**: Verified removal priority (`2♣`, `2♦`, `2♥`, `2♠`) for 1-deck and 2-deck configurations across player counts (4 to 12).
-2. **Bidding Logic**: Order of bidding, turn rotation, pass logic, minimum bid enforcement (150 minimum, step of 5), and single remaining bidder win conditions.
-3. **2-Deck Duplicate Rule**: Verification that when two identical highest cards (e.g. two Aces of Spades) are played in a trick, the card played **later** in order wins the trick.
-4. **Bheru Calls**: Mode validation (`SIMPLE`, `FIX`, `BOTH`, `SECOND`), duplicate call prevention, and reveal triggers.
-5. **WebSocket & REST APIs**: Room creation HTTP response, room lookup, WebSocket `join`/`welcome`/`game_state` frames, and disconnect handling.
+- **Deck Balancing**: Validates that cards divide evenly among 4–12 players by removing lowest-ranked 2s first.
+- **2-Deck Duplicate Winner Rule**: Guarantees that when identical highest cards are played (e.g. two A♠), the card played **later in time** wins the trick.
+- **State Sanitization**: Ensures that private hands and unrevealed bheru partner identities are never exposed in broadcast state payloads.
+- **WebSocket Protocol**: Tests multi-client connection handshakes, reconnection, host reassignment, and kick commands.

@@ -16,7 +16,7 @@ flowchart TD
         SPA_Server["Static File Server (/backend/static)"]
         REST_API["REST Routes (/api/*)"]
         WS_Server["WebSocket Handler (/ws/{room_id})"]
-        Room_Mgr["Room Manager (Rooms & Sessions)"]
+        Room_Service["Room Service (Rooms & Sessions)"]
         Game_Eng["Game Engine (Rules & State)"]
         DB_Layer["Supabase Client (Optional)"]
     end
@@ -24,28 +24,29 @@ flowchart TD
     SPA -->|HTTP GET /| SPA_Server
     SPA -->|POST /api/rooms| REST_API
     SPA -->|WS /ws/{room_id}| WS_Server
-    WS_Server --> Room_Mgr
-    REST_API --> Room_Mgr
-    Room_Mgr --> Game_Eng
-    Room_Mgr -.-> DB_Layer
+    WS_Server --> Room_Service
+    REST_API --> Room_Service
+    Room_Service --> Game_Eng
+    Room_Service -.-> DB_Layer
 ```
 
 ## 2. Component Breakdown
 
-### Backend (`backend/`)
-- `main.py`: Application entry point, lifespan, CORS, REST endpoints, WebSocket message loop, static SPA catch-all handler.
-- `game_engine.py`: Pure domain logic for card creation, deck balancing, dealing, bidding validation, trump selection, trump challenge duels, bheru calling/reveals, trick validation, winner evaluation, scoring.
-- `room_manager.py`: Room lifecycle management (create, join, disconnect, reconnect, host transfer, remove player), cached in-memory with optional Supabase database backing.
-- `ws_manager.py`: Active WebSocket connection registry grouped by room ID, broadcasting sanitized state updates and targeted private hand payloads.
-- `models.py`: Pydantic data schemas for Cards, Players, Room Configurations, Game State, Bheru Calls, and WebSocket messages.
-- `db.py`: Supabase client initialization.
+### Backend (`backend/app/`)
+- `main.py`: FastAPI server setup, CORS middleware, lifespan events, SPA static catch-all route.
+- `config.py`: Centralized environment and application configuration settings.
+- `api/`: REST endpoints (`health.py`, `rooms.py`, `network.py`) and WebSocket protocol handler (`websocket.py`).
+- `services/`: Room state management (`room_service.py`) and WebSocket connection registry (`connection_service.py`).
+- `game/`: Pure domain logic modules (`deck.py`, `bidding.py`, `trump.py`, `bheru.py`, `trick.py`, `scoring.py`).
+- `models/`: Pydantic data schemas (`game.py`) for Cards, Players, Room Configurations, Game State, and Messages.
+- `db/`: Supabase database client initialization (`client.py`).
 
-### Frontend (`frontend/`)
+### Frontend (`frontend/src/`)
 - `App.tsx`: Top-level page router based on synchronized `game.status`.
-- `pages/`: UI pages corresponding to game status (`HomePage`, `LobbyPage`, `BiddingPage`, `TrumpSelectPage`, `TrumpChallengePage`, `BheruSelectPage`, `PlayingPage`, `RoundEndPage`).
-- `components/`: Reusable components including `GameTable3D`, `Card3D`, `Hand`, `PlayerSeat`, `ScoreBar`, `ActivityLog`, `HowToPlayModal`.
-- `store/gameStore.ts`: Global state store using Zustand. Handles WebSocket incoming payloads, seat calculation, user action dispatching.
-- `hooks/useWebSocket.ts`: Manages WebSocket lifecycle, auto-reconnect, ping/pong latency measurement, state updates.
+- `features/`: UI page views corresponding to game status (`HomePage`, `LobbyPage`, `BiddingPage`, `TrumpSelectPage`, `TrumpChallengePage`, `BheruSelectPage`, `PlayingPage`, `RoundEndPage`).
+- `components/`: Modular reusable components (`card/`, `table/`, `player/`, `ui/`).
+- `store/gameStore.ts`: Global state store using Zustand.
+- `hooks/useWebSocket.ts`: Manages WebSocket lifecycle, auto-reconnect, and state sync.
 
 ## 3. Game Flow Lifecycle
 

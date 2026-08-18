@@ -16,7 +16,7 @@ This guide describes how to set up, develop, and test **Kadi Teeri Online** loca
 uv sync
 
 # Run backend development server
-uv run uvicorn backend.main:app --reload --port 8000
+uv run uvicorn backend.app.main:app --reload --port 8000
 ```
 
 The backend server runs on `http://localhost:8000`.
@@ -44,7 +44,7 @@ npm run build
 cd ..
 
 # 2. Run backend (serves both API/WS and React SPA from backend/static)
-uv run uvicorn backend.main:app --port 8000
+uv run uvicorn backend.app.main:app --port 8000
 ```
 
 Access `http://localhost:8000`.
@@ -70,6 +70,9 @@ VITE_WS_URL=ws://localhost:8000
 ```bash
 # Python linting
 uv run ruff check .
+
+# Python formatting
+uv run ruff format .
 
 # Frontend linting
 cd frontend

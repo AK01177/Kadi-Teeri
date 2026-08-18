@@ -12,7 +12,7 @@ Kadi Teeri Online allows 4 to 12 players to create or join private rooms to play
 
 ## Features
 
-- **Room-Based Matchmaking**: Create private rooms with a shareable 6-character room code.
+- **Room-Based Matchmaking**: Create private rooms with a shareable 4-character room code.
 - **Flexible Configuration**: Supports 4 to 12 players and 1 or 2 card decks.
 - **Real-Time Gameplay**: Synchronized game state across all clients with WebSockets.
 - **Resilient Connections**: Reconnection handling that restores player hands and state if disconnected.
@@ -29,7 +29,7 @@ Kadi Teeri Online is built as a single deployable monolithic web application.
 ```mermaid
 flowchart LR
     User -->|HTTP / WS| App[FastAPI Monolith Server]
-    subgraph App [FastAPI Server]
+    subgraph App [FastAPI Server app.main]
         SPA[Static React SPA /backend/static]
         REST[REST API /api/*]
         WS[WebSocket /ws/*]
@@ -48,18 +48,24 @@ flowchart LR
 ```text
 kadi-teeri/
 ├── backend/
-│   ├── main.py            # FastAPI entry point, REST routes & WS endpoint
-│   ├── game_engine.py     # Kadi Teeri domain logic & game rules
-│   ├── room_manager.py    # Room lifecycle & session management
-│   ├── ws_manager.py      # WebSocket connection registry & broadcasting
-│   ├── models.py          # Pydantic schemas & state models
-│   ├── db.py              # Supabase database integration
-│   ├── tests/             # Backend Pytest test suite
+│   ├── app/               # Core application package
+│   │   ├── main.py        # FastAPI app initialization, CORS & SPA route handler
+│   │   ├── config.py      # Application configuration settings
+│   │   ├── api/           # HTTP REST & WebSocket endpoint routers
+│   │   ├── models/        # Pydantic schemas & state domain models
+│   │   ├── services/      # Room management & WebSocket connection services
+│   │   ├── db/            # Supabase database client integration
+│   │   └── game/          # Kadi Teeri domain rules engine (deck, bidding, trump, bheru, trick, scoring)
+│   ├── tests/             # Pytest test suite
+│   │   ├── unit/          # Unit tests for game rules and mechanics
+│   │   ├── integration/   # Integration & API tests
+│   │   └── conftest.py    # Shared test fixtures
+│   ├── main.py            # Facade entry point for uvicorn
 │   └── requirements.txt   # Backup requirements file
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/         # Game phase views (Lobby, Bidding, Playing, etc.)
-│   │   ├── components/    # UI elements (GameTable3D, Card, Hand, ScoreBar)
+│   │   ├── features/      # Game phase feature pages
+│   │   ├── components/    # UI elements (card, table, player, ui)
 │   │   ├── store/         # Zustand global game state store
 │   │   ├── hooks/         # Custom hooks (useWebSocket, useSoundEffects)
 │   │   └── types/         # TypeScript definitions
@@ -73,7 +79,7 @@ kadi-teeri/
 │   ├── DEPLOYMENT.md
 │   └── TESTING.md
 ├── Dockerfile             # Multi-stage production container setup
-├── pyproject.toml         # Python uv dependency configuration
+├── pyproject.toml         # Python uv dependency & tool configuration
 └── uv.lock                # Deterministic lockfile
 ```
 
@@ -113,7 +119,7 @@ cd kadi-teeri
 uv sync
 
 # Run backend development server
-uv run uvicorn backend.main:app --reload --port 8000
+uv run uvicorn backend.app.main:app --reload --port 8000
 ```
 
 ### 3. Start the Frontend
@@ -138,7 +144,7 @@ npm run build
 cd ..
 
 # Run backend
-uv run uvicorn backend.main:app --port 8000
+uv run uvicorn backend.app.main:app --port 8000
 ```
 
 Open `http://localhost:8000` in your browser.
@@ -182,11 +188,3 @@ Detailed engineering documentation is available in the `docs/` directory:
 - [DEVELOPMENT.md](file:///d:/Code_PlayGround/kadi-teeri/docs/DEVELOPMENT.md): Local development workflow with `uv` and Vite.
 - [DEPLOYMENT.md](file:///d:/Code_PlayGround/kadi-teeri/docs/DEPLOYMENT.md): Render deployment and Docker configuration.
 - [TESTING.md](file:///d:/Code_PlayGround/kadi-teeri/docs/TESTING.md): Backend and frontend test coverage details.
-
----
-
-## Limitations
-
-- **In-Memory Active State**: Active game state is stored in server memory. Database persistence via Supabase handles room recovery on server restarts.
-- **Single-Instance Deployment**: Designed as a single deployable server instance on Render.
-- **Session Identification**: Player sessions use client-generated UUIDs stored in `localStorage`.
