@@ -9,21 +9,19 @@ export function TrumpChallengePage() {
   const { gameState, hand, seat, sendFn, selectedTrump, setSelectedTrump } =
     useGameStore();
 
-  if (!gameState || seat === null) return null;
-
   const game = gameState;
-  const seatLabel = (s: number) => game.players[s]?.name || `Seat ${s}`;
+  const seatLabel = (s: number) => game?.players[s]?.name || `Seat ${s}`;
 
-  const isDuelActive = game.challenge_duel_seats !== null;
-  const isInDuel = isDuelActive && game.challenge_duel_seats!.includes(seat);
-  const isMyTurnInDuel = isDuelActive && game.turn_seat === seat && isInDuel;
-  const iAmBidder = game.bidder_seat === seat;
+  const isDuelActive = game?.challenge_duel_seats !== null && game?.challenge_duel_seats !== undefined;
+  const isInDuel = isDuelActive && game?.challenge_duel_seats!.includes(seat as number);
+  const isMyTurnInDuel = isDuelActive && game?.turn_seat === seat && isInDuel;
+  const iAmBidder = game?.bidder_seat === seat;
 
   // ─── Countdown Timer ───
   const [countdown, setCountdown] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!game.challenge_deadline || isDuelActive) {
+    if (!game?.challenge_deadline || isDuelActive) {
       setCountdown(null);
       return;
     }
@@ -39,7 +37,7 @@ export function TrumpChallengePage() {
     tick();
     const interval = setInterval(tick, 250);
     return () => clearInterval(interval);
-  }, [game.challenge_deadline, isDuelActive]);
+  }, [game?.challenge_deadline, isDuelActive]);
 
   // ─── Actions ───
   const handleChallenge = useCallback(() => {
@@ -60,6 +58,8 @@ export function TrumpChallengePage() {
       setSelectedTrump(null);
     }
   }, [selectedTrump, sendFn, setSelectedTrump]);
+
+  if (!gameState || seat === null) return null;
 
   // ─── Phase: Duel winner picks new trump ───
   if (
@@ -92,11 +92,10 @@ export function TrumpChallengePage() {
             <p className="challenge-desc">
               <strong>{seatLabel(game.bidder_seat!)}</strong> selects{" "}
               <span
-                className={`challenge-suit ${
-                  game.trump_suit === "H" || game.trump_suit === "D"
+                className={`challenge-suit ${game.trump_suit === "H" || game.trump_suit === "D"
                     ? "red"
                     : "ink"
-                }`}
+                  }`}
               >
                 {SUIT_SYMBOLS[game.trump_suit!]} {SUIT_NAMES[game.trump_suit!]}
               </span>{" "}

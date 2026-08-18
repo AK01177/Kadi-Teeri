@@ -184,7 +184,7 @@ export function GameTable3D({
         (i - (count - 1) / 2) * 0.06,
       ] as [number, number, number],
     }));
-  }, [cardsPlayed, isMobile]);
+  }, [JSON.stringify(cardsPlayed), isMobile]);
 
   /* ═══════════════════════════════════════════
      Legal card set for hand rendering

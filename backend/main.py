@@ -50,10 +50,14 @@ logger = logging.getLogger("kadi_teeri")
 
 # ──────────────────────────── App ────────────────────────────
 
+from redis_client import init_redis, close_redis
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Kadi Teeri server starting...")
+    await init_redis()
     yield
+    await close_redis()
     logger.info("Kadi Teeri server shutting down.")
 
 
@@ -105,7 +109,7 @@ async def create_room(req: CreateRoomRequest):
     if not name:
         raise HTTPException(status_code=400, detail="Name is required.")
 
-    room_id, game = room_manager.create_room(player_id, name)
+    room_id, game = await room_manager.create_room(player_id, name)
     return CreateRoomResponse(room_id=room_id, player_id=player_id)
 
 
@@ -113,7 +117,7 @@ async def create_room(req: CreateRoomRequest):
 async def get_room_info(room_id: str):
     """Get basic room info (for the join page)."""
     room_id = room_id.upper()
-    game = room_manager.get_room(room_id)
+    game = await room_manager.get_room(room_id)
     if not game:
         return RoomInfoResponse(exists=False)
     return RoomInfoResponse(
@@ -215,14 +219,14 @@ async def websocket_endpoint(ws: WebSocket, room_id: str):
             else:
                 player_id = str(uuid.uuid4())
 
-            error, game = room_manager.join_room(room_id, player_id, name)
+            error, game = await room_manager.join_room(room_id, player_id, name)
             if error:
                 await ws.send_json({"type": "error", "error": error})
                 await ws.close()
                 return
 
             # Register WebSocket connection
-            ws_manager.add(room_id, player_id, ws)
+            await ws_manager.add(room_id, player_id, ws)
 
             # Find this player's seat and host status
             player = next((p for p in game.players if p.id == player_id), None)
@@ -248,13 +252,13 @@ async def websocket_endpoint(ws: WebSocket, room_id: str):
                 await ws.close()
                 return
 
-            error, game = room_manager.join_room(room_id, player_id, msg.name or "Player")
+            error, game = await room_manager.join_room(room_id, player_id, msg.name or "Player")
             if error:
                 await ws.send_json({"type": "error", "error": error})
                 await ws.close()
                 return
 
-            ws_manager.add(room_id, player_id, ws)
+            await ws_manager.add(room_id, player_id, ws)
             player = next((p for p in game.players if p.id == player_id), None)
 
             await ws.send_json({
@@ -296,7 +300,7 @@ async def websocket_endpoint(ws: WebSocket, room_id: str):
     finally:
         if player_id:
             ws_manager.remove(player_id)
-            rid, game, deleted = room_manager.disconnect_player(player_id)
+            rid, game, deleted = await room_manager.disconnect_player(player_id)
             if game and not deleted:
                 await _broadcast_full_state(rid, game)
 
@@ -306,7 +310,7 @@ async def handle_message(
     msg: ClientMessage, raw_data: dict
 ):
     """Process a game action message from a client."""
-    game = room_manager.get_room(room_id)
+    game = await room_manager.get_room(room_id)
     if not game:
         await ws.send_json({"type": "error", "error": "Room not found."})
         return
@@ -319,7 +323,7 @@ async def handle_message(
     seat = player.seat
 
     if msg.type == "configure":
-        error = room_manager.configure_room(
+        error = await room_manager.configure_room(
             room_id, player_id,
             player_count=msg.player_count,
             deck_count=msg.deck_count,
@@ -330,7 +334,7 @@ async def handle_message(
         await _broadcast_full_state(room_id, game)
 
     elif msg.type == "start_game":
-        error = room_manager.start_game(room_id, player_id)
+        error = await room_manager.start_game(room_id, player_id)
         if error:
             await ws.send_json({"type": "error", "error": error})
             return
@@ -345,7 +349,7 @@ async def handle_message(
             await ws.send_json({"type": "error", "error": error})
             return
         place_bid(game, seat, msg.amount)
-        room_manager.save_room(room_id)
+        await room_manager.save_room(room_id, game)
         await _broadcast_full_state(room_id, game)
 
     elif msg.type == "pass":
@@ -353,7 +357,7 @@ async def handle_message(
             await ws.send_json({"type": "error", "error": "Cannot pass right now."})
             return
         pass_bid(game, seat)
-        room_manager.save_room(room_id)
+        await room_manager.save_room(room_id, game)
         await _broadcast_full_state(room_id, game)
 
     elif msg.type == "select_trump":
@@ -365,7 +369,7 @@ async def handle_message(
             await ws.send_json({"type": "error", "error": error})
             return
         select_trump(game, seat, msg.suit)
-        room_manager.save_room(room_id)
+        await room_manager.save_room(room_id, game)
         await _broadcast_full_state(room_id, game)
 
         # If we entered challenge phase, start auto-expire timer
@@ -373,13 +377,12 @@ async def handle_message(
             import asyncio
             async def _auto_expire_challenge():
                 await asyncio.sleep(10)
-                room = room_manager.get_room(room_id)
-                if room is None:
+                g = await room_manager.get_room(room_id)
+                if g is None:
                     return
-                g = room["game"]
                 if g.status == GameStatus.TRUMP_CHALLENGE and g.challenge_duel_seats is None:
                     expire_trump_challenge(g)
-                    room_manager.save_room(room_id)
+                    await room_manager.save_room(room_id, g)
                     await _broadcast_full_state(room_id, g)
             asyncio.create_task(_auto_expire_challenge())
 
@@ -389,7 +392,7 @@ async def handle_message(
             await ws.send_json({"type": "error", "error": error})
             return
         accept_challenge(game, seat)
-        room_manager.save_room(room_id)
+        await room_manager.save_room(room_id, game)
         await _broadcast_full_state(room_id, game)
 
     elif msg.type == "challenge_bid":
@@ -398,7 +401,7 @@ async def handle_message(
             await ws.send_json({"type": "error", "error": error})
             return
         place_challenge_bid(game, seat)
-        room_manager.save_room(room_id)
+        await room_manager.save_room(room_id, game)
         await _broadcast_full_state(room_id, game)
 
     elif msg.type == "challenge_pass":
@@ -407,7 +410,7 @@ async def handle_message(
             await ws.send_json({"type": "error", "error": error})
             return
         pass_challenge_bid(game, seat)
-        room_manager.save_room(room_id)
+        await room_manager.save_room(room_id, game)
         await _broadcast_full_state(room_id, game)
 
     elif msg.type == "select_bherus":
@@ -417,7 +420,7 @@ async def handle_message(
             await ws.send_json({"type": "error", "error": error})
             return
         assign_bherus(game, seat, calls)
-        room_manager.save_room(room_id)
+        await room_manager.save_room(room_id, game)
         await _broadcast_full_state(room_id, game)
 
     elif msg.type == "play_card":
@@ -435,7 +438,7 @@ async def handle_message(
             return
             
         trick_completed = play_card(game, seat, card, auto_resolve=False)
-        room_manager.save_room(room_id)
+        await room_manager.save_room(room_id, game)
         
         # Broadcast the full state including the 4th card
         await _broadcast_full_state(room_id, game)
@@ -467,11 +470,11 @@ async def handle_message(
 
             # Resolve trick and start next turn
             resolve_trick(game)
-            room_manager.save_room(room_id)
+            await room_manager.save_room(room_id, game)
             await _broadcast_full_state(room_id, game)
 
     elif msg.type == "restart":
-        error = room_manager.restart_game(room_id, player_id)
+        error = await room_manager.restart_game(room_id, player_id)
         if error:
             await ws.send_json({"type": "error", "error": error})
             return
@@ -491,7 +494,7 @@ async def handle_message(
         if not target_id:
             await ws.send_json({"type": "error", "error": "Target player ID required."})
             return
-        error = room_manager.remove_player(room_id, player_id, target_id)
+        error = await room_manager.remove_player(room_id, player_id, target_id)
         if error:
             await ws.send_json({"type": "error", "error": error})
             return
