@@ -72,4 +72,14 @@ describe('gameStore', () => {
     expect(updated.isReconnecting).toBe(false);
     expect(updated.isRefreshing).toBe(false);
   });
+
+  it('should set and clear nudgeToast correctly', () => {
+    useGameStore.getState().showNudgeToast("Alice");
+    const state = useGameStore.getState();
+    expect(state.nudgeToast).not.toBeNull();
+    expect(state.nudgeToast?.senderName).toBe("Alice");
+
+    useGameStore.getState().clearNudgeToast();
+    expect(useGameStore.getState().nudgeToast).toBeNull();
+  });
 });
