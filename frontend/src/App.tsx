@@ -30,6 +30,10 @@ function App() {
     leaveRoom,
     is3DView,
     setIs3DView,
+    isRefreshing,
+    setIsRefreshing,
+    isReconnecting,
+    setIsReconnecting,
   } = useGameStore();
 
   const onMessage = useCallback(
@@ -66,10 +70,12 @@ function App() {
           break;
         case "error":
           showToast(msg.error);
+          setIsRefreshing(false);
+          setIsReconnecting(false);
           break;
       }
     },
-    [setIdentity, setGameState, showToast]
+    [setIdentity, setGameState, showToast, setIsRefreshing, setIsReconnecting]
   );
 
   const { send, isConnected, connect, disconnect } = useWebSocket({
@@ -157,6 +163,27 @@ function App() {
       // No saved session
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleRefresh = useCallback(() => {
+    if (isRefreshing || isReconnecting) return;
+    if (!isConnected) {
+      showToast("Cannot refresh: connection is offline.");
+      return;
+    }
+    setIsRefreshing(true);
+    const sent = send({ type: "fetch_state" });
+    if (!sent) {
+      setIsRefreshing(false);
+      showToast("Failed to send refresh request.");
+      return;
+    }
+    setTimeout(() => {
+      if (useGameStore.getState().isRefreshing) {
+        setIsRefreshing(false);
+        showToast("Refresh request timed out.");
+      }
+    }, 4000);
+  }, [isRefreshing, isReconnecting, isConnected, send, setIsRefreshing, showToast]);
 
   const handleLeave = () => {
     disconnect();
@@ -252,6 +279,14 @@ function App() {
             })}
           </div>
           <span className="spacer" />
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing || isReconnecting}
+            title="Re-fetch latest room state & re-render UI"
+          >
+            {isRefreshing ? "Refreshing…" : "Refresh"}
+          </button>
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => setIs3DView(!is3DView)}

@@ -60,6 +60,11 @@ interface GameStore {
   showToast: (msg: string) => void;
   clearToast: () => void;
 
+  isRefreshing: boolean;
+  setIsRefreshing: (v: boolean) => void;
+  isReconnecting: boolean;
+  setIsReconnecting: (v: boolean) => void;
+
   // Actions
   reset: () => void;
   leaveRoom: () => void;
@@ -116,6 +121,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       seat: me?.seat ?? state.seat,
       isHost: me?.is_host ?? state.isHost,
       trickWinner: null,
+      isRefreshing: false,
+      isReconnecting: false,
     });
   },
 
@@ -172,6 +179,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }, 3000);
   },
   clearToast: () => set({ toast: null }),
+
+  isRefreshing: false,
+  setIsRefreshing: (v) => set({ isRefreshing: v }),
+  isReconnecting: false,
+  setIsReconnecting: (v) => set({ isReconnecting: v }),
 
   // Actions
   reset: () => {

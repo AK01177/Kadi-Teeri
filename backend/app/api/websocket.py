@@ -338,6 +338,19 @@ async def handle_message(
 
         await _broadcast_full_state(room_id, game)
 
+    elif msg.type == "fetch_state":
+        sanitized = sanitize_game_state(game)
+        hands = dict(game.hands) if game.hands else {}
+        player_hand = hands.get(seat, [])
+        hand_data = [c.model_dump() if hasattr(c, "model_dump") else c for c in player_hand]
+        await ws.send_json(
+            {
+                "type": "game_state",
+                "game": sanitized,
+                "hand": hand_data,
+            }
+        )
+
     else:
         await ws.send_json({"type": "error", "error": f"Unknown message type: {msg.type}"})
 
