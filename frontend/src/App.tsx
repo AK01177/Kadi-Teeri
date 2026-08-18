@@ -67,6 +67,16 @@ function App() {
           break;
         case "error":
           showToast(msg.error);
+          if (msg.error === "Room not found.") {
+            useGameStore.getState().leaveRoom();
+            // Disconnect intentionally if we have the reference, but we are inside a callback.
+            // We can just call disconnect() from the hook, but we don't have it directly in the callback.
+            // Actually, handleLeave is defined below. Let's just reset the state.
+            // The disconnect will happen because roomId becomes null and App re-renders.
+            // Actually it's better to reload the page or clear local storage.
+            localStorage.removeItem("kadi_session");
+            window.location.reload();
+          }
           break;
       }
     },

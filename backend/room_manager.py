@@ -68,9 +68,12 @@ class RoomManager:
         if supabase:
             try:
                 loop = asyncio.get_event_loop()
-                res = await loop.run_in_executor(
-                    None,
-                    lambda: supabase.table("rooms").select("*").eq("room_code", room_id).execute()
+                res = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None,
+                        lambda: supabase.table("rooms").select("*").eq("room_code", room_id).execute()
+                    ),
+                    timeout=3.0
                 )
                 if res.data:
                     game = GameState.model_validate(res.data[0]["game_state"])

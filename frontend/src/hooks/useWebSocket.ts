@@ -30,6 +30,8 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
   const [isConnected, setIsConnected] = useState(false);
   const lastPongRef = useRef(0);
   const lastPingSentRef = useRef(0);
+  const lastSentPingMsRef = useRef(0);
+  const lastSentPingTimeRef = useRef(0);
 
   const optionsRef = useRef(options);
   optionsRef.current = options;
@@ -78,8 +80,9 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
             lastPingSentRef.current = Date.now();
             send({ type: "ping" }, true);
             
-            // If we haven't received a pong in PONG_TIMEOUT_MS, force reconnect
-            if (Date.now() - lastPongRef.current > PONG_TIMEOUT_MS) {
+            // If we haven't received a pong in a while since the last ping
+            // We allow missing 1 pong, but if we miss 2 (more than 7 seconds), we disconnect.
+            if (lastPongRef.current > 0 && Date.now() - lastPongRef.current > PONG_TIMEOUT_MS) {
               console.warn("WebSocket ping timeout, forcefully reconnecting...");
               ws.close(); // Triggers onclose which handles reconnection
             }
@@ -94,7 +97,14 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
               lastPongRef.current = Date.now();
               // Only send ping update if we have a reasonable ping value
               if (pingMs >= 0 && pingMs < 5000) {
-                 send({ type: "update_ping", ping_ms: pingMs }, true);
+                 const prev = lastSentPingMsRef.current;
+                 const now = Date.now();
+                 // Throttle updates: only if it changed by >20ms or it's been 10 seconds
+                 if (Math.abs(pingMs - prev) > 20 || (now - lastSentPingTimeRef.current > 10000)) {
+                    send({ type: "update_ping", ping_ms: pingMs }, true);
+                    lastSentPingMsRef.current = pingMs;
+                    lastSentPingTimeRef.current = now;
+                 }
               }
               return; // Handled heartbeat, don't pass to app
             }
