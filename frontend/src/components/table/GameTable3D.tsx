@@ -6,6 +6,7 @@ import type { GameState, Card as CardType } from "../../types/game";
 import { SUIT_SYMBOLS, SUIT_NAMES } from "../../types/game";
 import { Card3D } from "../card/Card3D";
 import { Card } from "../card/Card";
+import { useGameStore } from "../../store/gameStore";
 import "./GameTable3D.css";
 
 /* ──────────────────────────────────────────────────────────────
@@ -82,6 +83,33 @@ export function GameTable3D({
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  const sendFn = useGameStore((s) => s.sendFn);
+  const myPlayerId = useGameStore((s) => s.playerId);
+  const [nudgeCooldownSec, setNudgeCooldownSec] = useState(0);
+
+  useEffect(() => {
+    if (nudgeCooldownSec <= 0) return;
+    const timer = setInterval(() => {
+      setNudgeCooldownSec((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [nudgeCooldownSec]);
+
+  const activeTurnPlayer = game.players.find((p) => p.seat === game.turn_seat);
+  const canNudge3D =
+    activeTurnPlayer &&
+    Boolean(myPlayerId) &&
+    activeTurnPlayer.id !== myPlayerId &&
+    activeTurnPlayer.is_connected &&
+    game.status !== "lobby" &&
+    game.status !== "round_end";
+
+  const handleNudge3D = () => {
+    if (!canNudge3D || nudgeCooldownSec > 0 || !sendFn || !activeTurnPlayer) return;
+    sendFn({ type: "nudge_player", target_player_id: activeTurnPlayer.id });
+    setNudgeCooldownSec(5);
+  };
 
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -520,7 +548,35 @@ export function GameTable3D({
               : ""}
           </>
         ) : (
-          <>Waiting on {seatLabel(game.turn_seat!)}…</>
+          <>
+            Waiting on {game.turn_seat !== null ? seatLabel(game.turn_seat) : "someone"}…
+            {canNudge3D && (
+              <button
+                className="nudge-btn"
+                onClick={handleNudge3D}
+                disabled={nudgeCooldownSec > 0}
+                aria-label={`Nudge ${activeTurnPlayer?.name}`}
+                title={`Nudge ${activeTurnPlayer?.name}`}
+                style={{
+                  marginLeft: "10px",
+                  fontSize: "10px",
+                  padding: "2px 8px",
+                  borderRadius: "4px",
+                  background: "rgba(234, 179, 8, 0.2)",
+                  border: "1px solid rgba(234, 179, 8, 0.5)",
+                  color: "#fde047",
+                  cursor: nudgeCooldownSec > 0 ? "not-allowed" : "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  fontWeight: "bold",
+                }}
+              >
+                <span>🔔</span>
+                <span>{nudgeCooldownSec > 0 ? `${nudgeCooldownSec}s` : "Nudge"}</span>
+              </button>
+            )}
+          </>
         )}
       </div>
 
