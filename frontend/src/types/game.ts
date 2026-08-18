@@ -187,4 +187,10 @@ export interface PingUpdateMessage {
   ping_ms: number;
 }
 
-export type ServerMessage = WelcomeMessage | GameStateMessage | ErrorMessage | TrickWinnerMessage | PongMessage | PingUpdateMessage;
+export interface NudgeReceivedMessage {
+  type: "nudge_received";
+  sender_id: string;
+  sender_name: string;
+}
+
+export type ServerMessage = WelcomeMessage | GameStateMessage | ErrorMessage | TrickWinnerMessage | PongMessage | PingUpdateMessage | NudgeReceivedMessage;

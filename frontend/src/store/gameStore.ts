@@ -60,6 +60,10 @@ interface GameStore {
   showToast: (msg: string) => void;
   clearToast: () => void;
 
+  nudgeToast: { senderName: string; timestamp: number } | null;
+  showNudgeToast: (senderName: string) => void;
+  clearNudgeToast: () => void;
+
   isRefreshing: boolean;
   setIsRefreshing: (v: boolean) => void;
   isReconnecting: boolean;
@@ -179,6 +183,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }, 3000);
   },
   clearToast: () => set({ toast: null }),
+
+  nudgeToast: null,
+  showNudgeToast: (senderName) => {
+    const entry = { senderName, timestamp: Date.now() };
+    set({ nudgeToast: entry });
+    setTimeout(() => {
+      set((s) => (s.nudgeToast?.timestamp === entry.timestamp ? { nudgeToast: null } : {}));
+    }, 4000);
+  },
+  clearNudgeToast: () => set({ nudgeToast: null }),
 
   isRefreshing: false,
   setIsRefreshing: (v) => set({ isRefreshing: v }),

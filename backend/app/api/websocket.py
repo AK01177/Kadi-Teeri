@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 import uuid
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -32,6 +33,9 @@ from app.services.room_service import room_service
 
 logger = logging.getLogger("kadi_teeri.api.ws")
 router = APIRouter(tags=["WebSocket"])
+
+_last_nudge_times: dict[tuple[str, str], float] = {}
+NUDGE_COOLDOWN_SECONDS = 5.0
 
 
 @router.websocket("/ws/{room_id}")
@@ -349,6 +353,58 @@ async def handle_message(
                 "game": sanitized,
                 "hand": hand_data,
             }
+        )
+
+    elif msg.type == "nudge_player":
+        target_id = msg.target_player_id or raw_data.get("target_player_id")
+        if not target_id:
+            await ws.send_json({"type": "error", "error": "Target player ID required."})
+            return
+
+        if target_id == player_id:
+            await ws.send_json({"type": "error", "error": "You cannot nudge yourself."})
+            return
+
+        if game.status in (GameStatus.LOBBY, GameStatus.ROUND_END):
+            await ws.send_json({"type": "error", "error": "Nudge is not available right now."})
+            return
+
+        if game.turn_seat is None:
+            await ws.send_json({"type": "error", "error": "No active turn."})
+            return
+
+        target_player = next((p for p in game.players if p.id == target_id), None)
+        if not target_player:
+            await ws.send_json({"type": "error", "error": "Target player not in this room."})
+            return
+
+        if not target_player.is_connected:
+            await ws.send_json({"type": "error", "error": "Target player is disconnected."})
+            return
+
+        if target_player.seat != game.turn_seat:
+            await ws.send_json({"type": "error", "error": "It is not that player's turn."})
+            return
+
+        now = time.time()
+        last_nudge = _last_nudge_times.get((room_id, player_id), 0.0)
+        if now - last_nudge < NUDGE_COOLDOWN_SECONDS:
+            remaining = int(NUDGE_COOLDOWN_SECONDS - (now - last_nudge)) + 1
+            await ws.send_json({"type": "error", "error": f"Please wait {remaining}s before nudging again."})
+            return
+
+        _last_nudge_times[(room_id, player_id)] = now
+
+        sender_player = next((p for p in game.players if p.id == player_id), None)
+        sender_name = sender_player.name if sender_player else "A player"
+
+        await ws_manager.send_personal(
+            target_id,
+            {
+                "type": "nudge_received",
+                "sender_id": player_id,
+                "sender_name": sender_name,
+            },
         )
 
     else:

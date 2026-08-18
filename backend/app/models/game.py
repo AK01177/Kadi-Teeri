@@ -270,6 +270,7 @@ class ClientMessage(BaseModel):
     deck_index: int | None = None
     calls: list[BheruCall] | None = None
     ping_ms: int | None = None
+    target_player_id: str | None = None
 
 
 class ServerMessage(BaseModel):
@@ -288,3 +289,5 @@ class ServerMessage(BaseModel):
     is_host: bool | None = None
     seat: int | None = None
     ping_ms: int | None = None
+    sender_id: str | None = None
+    sender_name: str | None = None
