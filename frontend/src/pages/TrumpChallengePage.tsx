@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useGameStore } from "../store/gameStore";
-import { SUIT_SYMBOLS, SUIT_NAMES, SUITS } from "../types/game";
+import { SUIT_SYMBOLS, SUIT_NAMES } from "../types/game";
 import { GameTable } from "../components/GameTable";
 import { Hand } from "../components/Hand";
 import { ActivityLog } from "../components/ActivityLog";
 
 export function TrumpChallengePage() {
-  const { gameState, hand, seat, sendFn, selectedTrump, setSelectedTrump } =
+  const { gameState, hand, seat, sendFn } =
     useGameStore();
 
   if (!gameState || seat === null) return null;
@@ -53,13 +53,6 @@ export function TrumpChallengePage() {
   const handleDuelPass = useCallback(() => {
     sendFn?.({ type: "challenge_pass" });
   }, [sendFn]);
-
-  const confirmTrump = useCallback(() => {
-    if (selectedTrump) {
-      sendFn?.({ type: "select_trump", suit: selectedTrump });
-      setSelectedTrump(null);
-    }
-  }, [selectedTrump, sendFn, setSelectedTrump]);
 
   // ─── Phase: Duel winner picks new trump ───
   if (
