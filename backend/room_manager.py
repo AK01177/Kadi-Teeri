@@ -204,7 +204,7 @@ class RoomManager:
         await self.save_room(room_id, game)
         return None, game
 
-    async def leave_room(self, player_id: str) -> tuple[Optional[str], Optional[GameState], bool]:
+    async def leave_room(self, player_id: str, intentional: bool = False) -> tuple[Optional[str], Optional[GameState], bool]:
         """Remove a player from their room."""
         room_id = await self.get_player_room(player_id)
         if not room_id:
@@ -220,7 +220,7 @@ class RoomManager:
             await self.clear_player_room(player_id)
             return room_id, game, False
 
-        if game.status == GameStatus.LOBBY:
+        if game.status == GameStatus.LOBBY and intentional:
             game.players = [p for p in game.players if p.id != player_id]
             for i, p in enumerate(game.players):
                 p.seat = i
@@ -238,7 +238,10 @@ class RoomManager:
                 game.add_log(f"{game.players[0].name} is now the host.")
         else:
             player.is_connected = False
-            game.add_log(f"{player.name} disconnected.")
+            if intentional:
+                game.add_log(f"{player.name} left the room.")
+            else:
+                game.add_log(f"{player.name} disconnected.")
             if player.is_host:
                 self._transfer_host(game)
 

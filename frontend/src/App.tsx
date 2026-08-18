@@ -168,9 +168,12 @@ function App() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLeave = () => {
-    disconnect();
-    leaveRoom();
-    localStorage.removeItem("kadi_session");
+    send({ type: "leave" }, true);
+    setTimeout(() => {
+      disconnect();
+      leaveRoom();
+      localStorage.removeItem("kadi_session");
+    }, 50);
   };
 
   // Copy room code

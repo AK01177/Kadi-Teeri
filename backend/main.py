@@ -369,6 +369,10 @@ async def _handle_message_inner(
         await handle_remove_player(ws, room_id, player_id, msg, game, _broadcast_full_state)
     elif msg.type == "update_ping":
         await handle_update_ping(ws, room_id, player_id, msg, game)
+    elif msg.type == "leave":
+        rid, updated_game, deleted = await room_manager.leave_room(player_id, intentional=True)
+        if updated_game and not deleted:
+            await _broadcast_full_state(room_id, updated_game)
     else:
         await ws.send_json({"type": "error", "error": f"Unknown message type: {msg.type}"})
 
