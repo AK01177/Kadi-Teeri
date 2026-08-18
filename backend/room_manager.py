@@ -193,7 +193,8 @@ class RoomManager:
             return "Room is full.", None
 
         seat = len(game.players)
-        player = Player(id=player_id, name=player_name, seat=seat, is_host=False)
+        is_host = (seat == 0)
+        player = Player(id=player_id, name=player_name, seat=seat, is_host=is_host)
         game.players.append(player)
         await self.set_player_room(player_id, room_id)
 
@@ -226,9 +227,10 @@ class RoomManager:
             game.add_log(f"{player.name} left the room.")
 
             if not game.players:
-                await self.delete_room(room_id)
+                # Do not delete the room. If the host refreshes, they can rejoin and become host again.
                 await self.clear_player_room(player_id)
-                logger.info(f"Room {room_id} deleted (empty)")
+                await self.save_room(room_id, game)
+                logger.info(f"Room {room_id} is now empty (kept alive)")
                 return room_id, None, True
 
             if player.is_host and game.players:
