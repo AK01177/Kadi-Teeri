@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import random
+from typing import Any, cast
 
 from app.db import supabase
 from app.game.scoring import deal_new_round
@@ -36,8 +37,9 @@ class RoomManager:
             return
         try:
             res = supabase.table("rooms").select("*").execute()
-            for row in res.data:
-                rid = row["id"]
+            for item in res.data:
+                row = cast(dict[str, Any], item)
+                rid = str(row["id"])
                 state_dict = row["state"]
                 try:
                     game = GameState.model_validate(state_dict)

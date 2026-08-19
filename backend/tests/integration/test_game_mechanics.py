@@ -163,7 +163,7 @@ def test_bheru_modes_and_reveals():
     # Simulate play of King of Hearts by seat 3 (second play)
     play_card(game, 3, Card(rank="K", suit="H", deck_index=1), auto_resolve=False)
     assert second_bheru.play_count == 2
-    assert second_bheru.revealed is True
+    assert second_bheru.revealed
     assert second_bheru.holder_seat == 3
 
 
@@ -251,4 +251,5 @@ def test_room_manager_full_lifecycle():
     # Reconnect
     err, reconnected_game, _ = rm.join_room(room_id, "p2", "Player2_Updated")
     assert err is None
+    assert reconnected_game is not None
     assert reconnected_game.players[1].name == "Player2_Updated"

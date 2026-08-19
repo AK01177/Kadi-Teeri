@@ -77,9 +77,14 @@ class ConnectionManager:
             self._listeners[room_id].cancel()
             del self._listeners[room_id]
         if room_id in self._pubsubs:
-            asyncio.create_task(self._pubsubs[room_id].unsubscribe())
-            asyncio.create_task(self._pubsubs[room_id].close())
-            del self._pubsubs[room_id]
+            pubsub = self._pubsubs.pop(room_id)
+            async def _cleanup():
+                try:
+                    await pubsub.unsubscribe()
+                    await pubsub.close()
+                except Exception as e:
+                    logger.warning(f"Error cleaning up pubsub for {room_id}: {e}")
+            asyncio.create_task(_cleanup())
 
     def get_ws(self, player_id: str) -> WebSocket | None:
         """Get local WebSocket for a player."""

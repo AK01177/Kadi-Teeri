@@ -14,6 +14,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.game.bheru import assign_bherus, validate_bheru_calls
 from app.game.bidding import pass_bid, place_bid, validate_bid
+from app.game.bot import process_bot_turns
 from app.game.scoring import sanitize_game_state
 from app.game.trick import _determine_trick_winner, play_card, resolve_trick, validate_play
 from app.game.trump import (
@@ -60,6 +61,7 @@ async def websocket_endpoint(ws: WebSocket, room_id: str):
             raw_data = json.loads(raw)
             provided_player_id = raw_data.get("player_id")
             player_id = provided_player_id if provided_player_id else str(uuid.uuid4())
+            assert player_id is not None
 
             error, game, final_player_id = room_service.join_room(room_id, player_id, name)
             if error or not game or not final_player_id:
@@ -141,6 +143,8 @@ async def websocket_endpoint(ws: WebSocket, room_id: str):
             rid, game, deleted = room_service.disconnect_player(player_id)
             if game and not deleted and rid:
                 await _broadcast_full_state(rid, game)
+                if game.status == GameStatus.PLAYING:
+                    await process_bot_turns(game, rid, _broadcast_full_state, ws_manager.broadcast)
 
 
 async def handle_message(
@@ -303,6 +307,9 @@ async def handle_message(
             resolve_trick(game)
             room_service.save_room(room_id)
             await _broadcast_full_state(room_id, game)
+
+        if game.status == GameStatus.PLAYING:
+            await process_bot_turns(game, room_id, _broadcast_full_state, ws_manager.broadcast)
 
     elif msg.type == "restart":
         error = room_service.restart_game(room_id, player_id)
