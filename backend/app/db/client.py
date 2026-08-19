@@ -32,3 +32,14 @@ if url and key:
         supabase = None
 else:
     logger.warning("SUPABASE_URL or SUPABASE_KEY missing. Fallback to in-memory mode active.")
+
+redis_client = None
+import os
+redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+try:
+    from redis.asyncio import from_url
+    redis_client = from_url(redis_url, decode_responses=True)
+    logger.info(f"Redis client initialized successfully at {redis_url}.")
+except Exception as err:
+    logger.warning(f"Failed to initialize Redis client: {err}")
+    redis_client = None
