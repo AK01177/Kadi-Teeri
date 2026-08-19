@@ -67,7 +67,7 @@ async def websocket_endpoint(ws: WebSocket, room_id: str):
                 await ws.close()
                 return
 
-            ws_manager.add(room_id, player_id, ws)
+            await ws_manager.add(room_id, player_id, ws)
             player = next((p for p in game.players if p.id == player_id), None)
 
             await ws.send_json(
@@ -95,7 +95,7 @@ async def websocket_endpoint(ws: WebSocket, room_id: str):
                 await ws.close()
                 return
 
-            ws_manager.add(room_id, player_id, ws)
+            await ws_manager.add(room_id, player_id, ws)
             player = next((p for p in game.players if p.id == player_id), None)
 
             await ws.send_json(
