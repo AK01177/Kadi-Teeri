@@ -23,8 +23,8 @@ def _start_playing(game: GameState) -> None:
     game.status = GameStatus.PLAYING
     game.trick_number = 1
 
-    # Dealer leads the very first trick of the round
-    leader = game.dealer
+    # Bidder leads the very first trick of the round
+    leader = game.bidder_seat if game.bidder_seat is not None else game.dealer
     game.turn_seat = leader
     game.trick = TrickState(leader_seat=leader, lead_suit=None, cards_played=[])
     game.captured = {i: [] for i in range(len(game.players))}

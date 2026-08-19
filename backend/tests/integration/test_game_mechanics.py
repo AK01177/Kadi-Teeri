@@ -232,11 +232,11 @@ def test_room_manager_full_lifecycle():
     assert game.players[0].is_host is True
 
     # Join players
-    err, _ = rm.join_room(room_id, "p2", "Player2")
+    err, _, _ = rm.join_room(room_id, "p2", "Player2")
     assert err is None
-    err, _ = rm.join_room(room_id, "p3", "Player3")
+    err, _, _ = rm.join_room(room_id, "p3", "Player3")
     assert err is None
-    err, _ = rm.join_room(room_id, "p4", "Player4")
+    err, _, _ = rm.join_room(room_id, "p4", "Player4")
     assert err is None
 
     # Configure room
@@ -249,6 +249,6 @@ def test_room_manager_full_lifecycle():
     assert game.status == GameStatus.BIDDING
 
     # Reconnect
-    err, reconnected_game = rm.join_room(room_id, "p2", "Player2_Updated")
+    err, reconnected_game, _ = rm.join_room(room_id, "p2", "Player2_Updated")
     assert err is None
     assert reconnected_game.players[1].name == "Player2_Updated"

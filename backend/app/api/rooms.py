@@ -36,6 +36,7 @@ class RoomInfoResponse(BaseModel):
     player_count: int = 0
     max_players: int = 4
     can_join: bool = False
+    disconnected_players: list[str] = []
 
 
 @router.post("/api/rooms", response_model=CreateRoomResponse)
@@ -57,10 +58,14 @@ async def get_room_info(room_id: str):
     game = room_service.get_room(room_id)
     if not game:
         return RoomInfoResponse(exists=False)
+    disconnected_players = [
+        p.name for p in game.players if not p.is_connected
+    ]
     return RoomInfoResponse(
         exists=True,
         status=game.status.value,
         player_count=len(game.players),
         max_players=game.config.player_count,
         can_join=game.status == GameStatus.LOBBY and len(game.players) < game.config.player_count,
+        disconnected_players=disconnected_players,
     )

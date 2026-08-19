@@ -92,7 +92,9 @@ export function HomePage() {
         setLoading(false);
         return;
       }
-      if (!info.can_join) {
+      const isRejoining = info.disconnected_players?.map((n: string) => n.toLowerCase()).includes(trimmed.toLowerCase());
+
+      if (!info.can_join && !isRejoining) {
         showToast(
           info.status !== "lobby"
             ? "That game has already started."

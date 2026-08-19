@@ -61,12 +61,13 @@ async def websocket_endpoint(ws: WebSocket, room_id: str):
             provided_player_id = raw_data.get("player_id")
             player_id = provided_player_id if provided_player_id else str(uuid.uuid4())
 
-            error, game = room_service.join_room(room_id, player_id, name)
-            if error or not game:
+            error, game, final_player_id = room_service.join_room(room_id, player_id, name)
+            if error or not game or not final_player_id:
                 await ws.send_json({"type": "error", "error": error or "Failed to join room."})
                 await ws.close()
                 return
 
+            player_id = final_player_id
             await ws_manager.add(room_id, player_id, ws)
             player = next((p for p in game.players if p.id == player_id), None)
 
@@ -89,12 +90,13 @@ async def websocket_endpoint(ws: WebSocket, room_id: str):
                 await ws.close()
                 return
 
-            error, game = room_service.join_room(room_id, player_id, msg.name or "Player")
-            if error or not game:
+            error, game, final_player_id = room_service.join_room(room_id, player_id, msg.name or "Player")
+            if error or not game or not final_player_id:
                 await ws.send_json({"type": "error", "error": error or "Failed to rejoin room."})
                 await ws.close()
                 return
 
+            player_id = final_player_id
             await ws_manager.add(room_id, player_id, ws)
             player = next((p for p in game.players if p.id == player_id), None)
 

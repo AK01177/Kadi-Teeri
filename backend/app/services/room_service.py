@@ -120,12 +120,12 @@ class RoomManager:
             return rid, self._rooms.get(rid)
         return None, None
 
-    def join_room(self, room_id: str, player_id: str, player_name: str) -> tuple[str | None, GameState | None]:
-        """Join an existing room or reconnect."""
+    def join_room(self, room_id: str, player_id: str, player_name: str) -> tuple[str | None, GameState | None, str | None]:
+        """Join an existing room or reconnect. Returns (error, game, final_player_id)."""
         room_id = room_id.upper()
         game = self._rooms.get(room_id)
         if not game:
-            return "Room not found.", None
+            return "Room not found.", None, None
 
         existing = next((p for p in game.players if p.id == player_id), None)
         if existing:
@@ -134,13 +134,23 @@ class RoomManager:
             self._player_rooms[player_id] = room_id
             game.log.append(f"{player_name} reconnected.")
             self.save_room(room_id)
-            return None, game
+            return None, game, player_id
+
+        # Allow reclaiming a disconnected seat by exact name match
+        disconnected_match = next((p for p in game.players if p.name.lower() == player_name.lower() and not p.is_connected), None)
+        if disconnected_match:
+            disconnected_match.is_connected = True
+            disconnected_match.name = player_name  # Ensure exact case matches their new input
+            self._player_rooms[disconnected_match.id] = room_id
+            game.log.append(f"{player_name} reconnected to their seat.")
+            self.save_room(room_id)
+            return None, game, disconnected_match.id
 
         if game.status != GameStatus.LOBBY:
-            return "Game already in progress.", None
+            return "Game already in progress.", None, None
 
         if len(game.players) >= game.config.player_count:
-            return "Room is full.", None
+            return "Room is full.", None, None
 
         taken_seats = {p.seat for p in game.players}
         seat = 0
@@ -164,7 +174,7 @@ class RoomManager:
         self.save_room(room_id)
 
         logger.info(f"Player {player_name} ({player_id}) joined room {room_id} at seat {seat}")
-        return None, game
+        return None, game, player_id
 
     def disconnect_player(self, player_id: str) -> tuple[str | None, GameState | None, bool]:
         """Handle a player disconnection. Returns (room_id, game, deleted_flag)."""
