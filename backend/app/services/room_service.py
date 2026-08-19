@@ -120,7 +120,9 @@ class RoomManager:
             return rid, self._rooms.get(rid)
         return None, None
 
-    def join_room(self, room_id: str, player_id: str, player_name: str) -> tuple[str | None, GameState | None, str | None]:
+    def join_room(
+        self, room_id: str, player_id: str, player_name: str
+    ) -> tuple[str | None, GameState | None, str | None]:
         """Join an existing room or reconnect. Returns (error, game, final_player_id)."""
         room_id = room_id.upper()
         game = self._rooms.get(room_id)
@@ -137,7 +139,10 @@ class RoomManager:
             return None, game, player_id
 
         # Allow reclaiming a disconnected seat by exact name match
-        disconnected_match = next((p for p in game.players if p.name.lower() == player_name.lower() and not p.is_connected), None)
+        disconnected_match = next(
+            (p for p in game.players if p.name.lower() == player_name.lower() and not p.is_connected),
+            None
+        )
         if disconnected_match:
             disconnected_match.is_connected = True
             disconnected_match.name = player_name  # Ensure exact case matches their new input
