@@ -38,7 +38,7 @@ class ConnectionManager:
         if room_id not in self._rooms:
             self._rooms[room_id] = {}
             is_new_room = True
-            
+
         self._rooms[room_id][player_id] = ws
         self._player_rooms[player_id] = room_id
         logger.info(f"Player {player_id} connected locally to room {room_id}")
@@ -50,7 +50,7 @@ class ConnectionManager:
                 channel_name = f"room:events:{room_id}"
                 await pubsub.subscribe(channel_name)
                 self._pubsubs[room_id] = pubsub
-                
+
                 # Start listener task
                 task = asyncio.create_task(self._listen_to_redis(room_id, pubsub))
                 self._listeners[room_id] = task
@@ -63,14 +63,14 @@ class ConnectionManager:
         if room_id and room_id in self._rooms:
             self._rooms[room_id].pop(player_id, None)
             logger.info(f"Player {player_id} disconnected locally from room {room_id}")
-            
+
             if not self._rooms[room_id]:
                 # No more local players in this room, clean up Redis subscription
                 del self._rooms[room_id]
                 self._cleanup_listener(room_id)
-                
+
         return room_id
-        
+
     def _cleanup_listener(self, room_id: str):
         """Stop listening to a room's Redis channel."""
         if room_id in self._listeners:
@@ -149,7 +149,7 @@ class ConnectionManager:
             exclude = data.get("_exclude")
             # Create a clean payload to send to clients
             payload = {k: v for k, v in data.items() if k != "_exclude"}
-            
+
             for pid, ws in list(self._rooms[room_id].items()):
                 if pid == exclude:
                     continue
@@ -184,7 +184,7 @@ class ConnectionManager:
                 return
             except Exception as e:
                 logger.warning(f"Redis publish failed: {e}. Falling back to local.")
-                
+
         # Fallback to local only
         await self._handle_redis_message(room_id, {**message, "_exclude": exclude})
 
@@ -216,7 +216,7 @@ class ConnectionManager:
                 return
             except Exception as e:
                 logger.warning(f"Redis publish failed: {e}. Falling back to local.")
-                
+
         # Fallback to local only
         await self._handle_redis_message(room_id, payload)
 
