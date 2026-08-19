@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.models.game import GameState, GameStatus, Player, RoomConfig, Card
+from app.models.game import Card, GameState, GameStatus, Player, RoomConfig
 
 
 @pytest.fixture
