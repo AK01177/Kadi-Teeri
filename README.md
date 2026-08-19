@@ -1,161 +1,190 @@
 # Kadi Teeri Online
 
-A real-time, multiplayer web application for playing the Indian trick-taking card game Kadi Teeri. The application features room-based matchmaking, real-time synchronized game state via WebSockets, and automatic reconnect handling.
+A real-time, multiplayer web application for playing the Indian trick-taking card game **Kadi Teeri**. The application features room-based matchmaking, real-time synchronized game state via WebSockets, and resilient connection handling.
+
+---
 
 ## Overview
 
-Kadi Teeri Online allows up to four players to create or join private rooms to play Kadi Teeri with their friends. It fully implements the game's core rules, including bidding, trump selection, partner (Bheru) calling, and trick-taking validation.
+Kadi Teeri Online allows 4 to 12 players to create or join private rooms to play Kadi Teeri with friends. It fully implements the game's core rules, including bidding, trump selection, trump challenge duels, partner (Bheru) calling (`SIMPLE`, `FIX`, `BOTH`, `SECOND` modes), trick-taking validation, 2-deck duplicate card win resolution, and scoring.
+
+---
 
 ## Features
 
-- **Room-Based Matchmaking:** Create a private room and share the 6-character room code.
-- **Real-Time Gameplay:** Synchronized game state across all clients with minimal latency using WebSockets.
-- **Resilient Connections:** Seamless reconnection handling that restores a player's hand and game state if they disconnect.
-- **Full Game Logic Enforcement:** Server-side validation of bids, trump selection, Bheru calls, and card plays.
-- **Responsive UI:** A dynamic frontend providing a unified experience across the Lobby, Bidding, Trump Selection, Bheru Selection, and Playing phases.
+- **Room-Based Matchmaking**: Create private rooms with a shareable 6-character room code.
+- **Flexible Configuration**: Supports 4 to 12 players and 1 or 2 card decks.
+- **Real-Time Gameplay**: Synchronized game state across all clients with WebSockets.
+- **Resilient Connections**: Reconnection handling that restores player hands and state if disconnected.
+- **Trump Challenge Window**: 10-second countdown for opponents to challenge bids and initiate bid duels.
+- **Bheru Modes**: 1-deck simple partner calls + 2-deck advanced modes (`FIX`, `BOTH`, `SECOND`).
+- **Responsive 3D/2D UI**: Integrated React SPA with felt game table aesthetics.
 
-## Tech Stack
-
-| Layer          | Technology       | Purpose                       |
-| -------------- | ---------------- | ----------------------------- |
-| **Frontend**   | React 19 / Vite  | User Interface                |
-| **State**      | Zustand          | Client-side State Management  |
-| **Backend**    | FastAPI          | REST API & WebSocket Server   |
-| **Validation** | Pydantic         | Data parsing and validation   |
-| **Networking** | WebSockets       | Real-time bi-directional sync |
+---
 
 ## Architecture
 
+Kadi Teeri Online is built as a single deployable monolithic web application.
+
 ```mermaid
 flowchart LR
-    User -->|HTTP / WS| Frontend[React SPA]
-    Frontend -->|POST /api/rooms| API[FastAPI REST]
-    Frontend -->|WS /ws/{room_id}| WS[FastAPI WebSocket]
-    WS --> GameEngine[In-Memory Game Engine]
-    API --> RoomManager[In-Memory Room Manager]
-    GameEngine -.-> RoomManager
+    User -->|HTTP / WS| App[FastAPI Monolith Server]
+    subgraph App [FastAPI Server app.main]
+        SPA[Static React SPA /backend/static]
+        REST[REST API /api/*]
+        WS[WebSocket /ws/*]
+        Engine[In-Memory Game Engine & Room Manager]
+        DB[Supabase Client optional]
+    end
+    REST --> Engine
+    WS --> Engine
+    Engine -.-> DB
 ```
+
+---
 
 ## Project Structure
 
 ```text
-Kadi teeri/
+kadi-teeri/
 ├── backend/
-│   ├── main.py            # FastAPI entry point & WS routing
-│   ├── game_engine.py     # Core Kadi Teeri rules and mechanics
-│   ├── room_manager.py    # Room lifecycle and player sessions
-│   ├── ws_manager.py      # WebSocket connection management
-│   ├── models.py          # Pydantic schemas and game models
-│   ├── tests/             # Backend tests
-│   └── requirements.txt
-└── frontend/
-    ├── src/
-    │   ├── pages/         # UI for different game phases
-    │   ├── components/    # Reusable UI components
-    │   ├── store/         # Zustand game store
-    │   ├── hooks/         # Custom hooks (e.g., useWebSocket)
-    │   ├── types/         # TypeScript definitions
-    │   └── App.tsx        # Main application router
-    ├── package.json
-    └── vite.config.ts
+│   ├── app/               # Core application package
+│   │   ├── main.py        # FastAPI app initialization, CORS & SPA route handler
+│   │   ├── config.py      # Application configuration settings
+│   │   ├── api/           # HTTP REST & WebSocket endpoint routers
+│   │   ├── models/        # Pydantic schemas & state domain models
+│   │   ├── services/      # Room management & WebSocket connection services
+│   │   ├── db/            # Supabase database client integration
+│   │   └── game/          # Kadi Teeri domain rules engine (deck, bidding, trump, bheru, trick, scoring)
+│   ├── tests/             # Pytest test suite
+│   │   ├── unit/          # Unit tests for game rules and mechanics
+│   │   ├── integration/   # Integration & API tests
+│   │   └── conftest.py    # Shared test fixtures
+│   ├── main.py            # Facade entry point for uvicorn
+│   └── requirements.txt   # Backup requirements file
+├── frontend/
+│   ├── src/
+│   │   ├── features/      # Game phase feature pages
+│   │   ├── components/    # UI elements (card, table, player, ui)
+│   │   ├── store/         # Zustand global game state store
+│   │   ├── hooks/         # Custom hooks (useWebSocket, useSoundEffects)
+│   │   └── types/         # TypeScript definitions
+│   ├── package.json
+│   └── vite.config.ts
+├── docs/                  # Engineering documentation
+│   ├── CODE_RULES.md
+│   ├── DATABASE.md
+│   ├── ARCHITECTURE.md
+│   ├── DEVELOPMENT.md
+│   ├── DEPLOYMENT.md
+│   └── TESTING.md
+├── Dockerfile             # Multi-stage production container setup
+├── pyproject.toml         # Python uv dependency & tool configuration
+└── uv.lock                # Deterministic lockfile
 ```
+
+---
+
+## Technical Stack
+
+| Layer | Technology | Purpose |
+|---|---|---|
+| **Frontend** | React 19 / Vite | User Interface |
+| **State** | Zustand | Client-side State Management |
+| **Backend** | FastAPI | REST API & WebSocket Server |
+| **Dependency Mgr** | `uv` | Python dependency locking & virtual environments |
+| **Validation** | Pydantic | Data schemas & validation |
+| **Networking** | WebSockets | Real-time state synchronization |
+
+---
 
 ## Prerequisites
 
 - **Node.js** (v18+)
-- **Python** (3.10+)
+- **Python** (3.10+) with `uv` installed
 
-## Installation
+---
+
+## Quick Start (Local Development)
 
 ### 1. Clone the repository
 ```bash
 git clone <repository-url>
-cd "Kadi teeri"
+cd kadi-teeri
 ```
 
 ### 2. Start the Backend
 ```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
-pip install -r requirements.txt
+# Install dependencies with uv
+uv sync
 
-# Start the server (runs on port 8000 by default)
-python main.py
+# Run backend development server
+uv run uvicorn backend.app.main:app --reload --port 8000
 ```
 
 ### 3. Start the Frontend
 ```bash
-cd ../frontend
+cd frontend
 npm install
-
-# Start the development server
 npm run dev
 ```
 
+Open `http://localhost:5173` in your browser.
+
+---
+
+## Combined Production Run
+
+To test the unified single-process application locally:
+
+```bash
+# Build frontend static files into backend/static
+cd frontend
+npm run build
+cd ..
+
+# Run backend
+uv run uvicorn backend.app.main:app --port 8000
+```
+
+Open `http://localhost:8000` in your browser.
+
+---
+
 ## Environment Variables
 
-The backend relies on defaults and does not require a `.env` file for local development.
-For the frontend, you can optionally configure connection URLs if hosting the backend elsewhere.
+| Variable | Required | Description | Default |
+|---|:---:|---|---|
+| `PORT` | No | Server port | `8000` |
+| `SUPABASE_URL` | No | Supabase database API URL | In-memory fallback |
+| `SUPABASE_KEY` | No | Supabase database anon key | In-memory fallback |
+| `VITE_API_URL` | No | Frontend REST API base URL | Window origin |
+| `VITE_WS_URL` | No | Frontend WebSocket base URL | Window origin |
 
-### Frontend
-
-| Variable         | Required | Description                                                  |
-| ---------------- | :------: | ------------------------------------------------------------ |
-| `VITE_API_URL`   |    No    | REST API base URL (Default: `http://<hostname>:8000`)        |
-| `VITE_WS_URL`    |    No    | WebSocket base URL (Default: `ws://<hostname>:8000`)         |
-
-## Usage
-
-1. Start both the backend and frontend servers.
-2. Open the frontend URL (e.g., `http://localhost:5173`) in your browser.
-3. **Player 1**: Enter a name and click **Create Room**. A unique 6-character room code will be generated.
-4. **Players 2–4**: Open the same URL in different browsers/incognito windows, enter a name, provide the room code, and click **Join Room**.
-5. Once 4 players have joined, the host can start the game.
-
-## API Documentation
-
-### REST Endpoints
-
-| Method | Endpoint               | Description                                | Auth |
-| ------ | ---------------------- | ------------------------------------------ | ---- |
-| `GET`  | `/api/health`          | Health check endpoint                      | No   |
-| `POST` | `/api/rooms`           | Creates a new game room                    | No   |
-| `GET`  | `/api/rooms/{room_id}` | Retrieves lobby status and player count    | No   |
-
-### WebSocket
-
-| Endpoint          | Description                                  |
-| ----------------- | -------------------------------------------- |
-| `/ws/{room_id}`   | Real-time connection for game state syncing  |
-
-## Database
-
-This project currently operates entirely **in-memory**. There is no persistent database. Game rooms and active sessions are stored in memory (`room_manager.py`), making it highly responsive but ephemeral.
+---
 
 ## Testing
 
-Backend unit tests are written using `pytest`.
-
+### Backend Tests
 ```bash
-cd backend
-pytest
+uv run pytest backend/tests
 ```
 
-Frontend testing is configured using `vitest`, though testing coverage is currently limited.
-
-## Development
-
-The frontend uses `oxlint` for linting and Vite for hot module replacement.
-
+### Frontend Tests
 ```bash
 cd frontend
-npm run lint
-npm run build
+npm test
 ```
 
-## Limitations
+---
 
-- **In-Memory State**: Because game state is held in memory, restarting the backend server will immediately destroy all active rooms and disconnect all players.
-- **Single-Instance Architecture**: The current WebSocket and room management implementation is designed for a single server instance. It cannot be horizontally scaled without introducing a Pub/Sub layer (like Redis) and a persistent state store.
-- **Authentication**: There is no formal user authentication; sessions are tied to randomly generated UUIDs saved in browser `localStorage`.
+## Engineering Documentation
+
+Detailed engineering documentation is available in the `docs/` directory:
+
+- [CODE_RULES.md](file:///d:/Code_PlayGround/kadi-teeri/docs/CODE_RULES.md): Coding standards, linting rules, styling conventions.
+- [DATABASE.md](file:///d:/Code_PlayGround/kadi-teeri/docs/DATABASE.md): State model, Supabase schema, JSON serialization.
+- [ARCHITECTURE.md](file:///d:/Code_PlayGround/kadi-teeri/docs/ARCHITECTURE.md): System architecture, WebSocket protocol, game lifecycle.
+- [DEVELOPMENT.md](file:///d:/Code_PlayGround/kadi-teeri/docs/DEVELOPMENT.md): Local development workflow with `uv` and Vite.
+- [DEPLOYMENT.md](file:///d:/Code_PlayGround/kadi-teeri/docs/DEPLOYMENT.md): Render deployment and Docker configuration.
+- [TESTING.md](file:///d:/Code_PlayGround/kadi-teeri/docs/TESTING.md): Backend and frontend test coverage details.

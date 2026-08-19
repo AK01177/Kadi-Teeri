@@ -1,7 +1,0 @@
-fastapi==0.115.0
-uvicorn[standard]==0.30.0
-pydantic>=2.11.7
-websockets>=13.0
-supabase>=2.30.0
-python-dotenv==1.0.0
-redis==5.0.0

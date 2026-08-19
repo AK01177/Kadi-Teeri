@@ -1,16 +1,17 @@
 import { useEffect, useCallback } from "react";
 import { useGameStore, setConnectCallback } from "./store/gameStore";
 import { useWebSocket } from "./hooks/useWebSocket";
+import { triggerNudgeAlert } from "./hooks/useSoundEffects";
 import type { ServerMessage } from "./types/game";
 
-import { HomePage } from "./pages/HomePage";
-import { LobbyPage } from "./pages/LobbyPage";
-import { BiddingPage } from "./pages/BiddingPage";
-import { TrumpSelectPage } from "./pages/TrumpSelectPage";
-import { TrumpChallengePage } from "./pages/TrumpChallengePage";
-import { BheruSelectPage } from "./pages/BheruSelectPage";
-import { PlayingPage } from "./pages/PlayingPage";
-import { RoundEndPage } from "./pages/RoundEndPage";
+import { HomePage } from "./features/HomePage";
+import { LobbyPage } from "./features/LobbyPage";
+import { BiddingPage } from "./features/BiddingPage";
+import { TrumpSelectPage } from "./features/trump/TrumpSelectPage";
+import { TrumpChallengePage } from "./features/trump/TrumpChallengePage";
+import { BheruSelectPage } from "./features/BheruSelectPage";
+import { PlayingPage } from "./features/PlayingPage";
+import { RoundEndPage } from "./features/RoundEndPage";
 
 const WS_BASE =
   import.meta.env.VITE_WS_URL ||
@@ -23,6 +24,8 @@ function App() {
     gameState,
     toast,
     clearToast,
+    nudgeToast,
+    clearNudgeToast,
     setIdentity,
     setGameState,
     setConnected,
@@ -31,6 +34,10 @@ function App() {
     leaveRoom,
     is3DView,
     setIs3DView,
+    isRefreshing,
+    setIsRefreshing,
+    isReconnecting,
+    setIsReconnecting,
   } = useGameStore();
 
   const onMessage = useCallback(
@@ -65,25 +72,28 @@ function App() {
         case "ping_update":
           useGameStore.getState().setPingUpdate(msg.player_id as string, msg.ping_ms as number);
           break;
+        case "nudge_received": {
+          const senderName = (msg.sender_name as string) || "A player";
+          useGameStore.getState().showNudgeToast(senderName);
+          triggerNudgeAlert();
+          break;
+        }
         case "error":
           showToast(msg.error);
+          setIsRefreshing(false);
+          setIsReconnecting(false);
           if (msg.error === "Room not found.") {
             useGameStore.getState().leaveRoom();
-            // Disconnect intentionally if we have the reference, but we are inside a callback.
-            // We can just call disconnect() from the hook, but we don't have it directly in the callback.
-            // Actually, handleLeave is defined below. Let's just reset the state.
-            // The disconnect will happen because roomId becomes null and App re-renders.
-            // Actually it's better to reload the page or clear local storage.
             localStorage.removeItem("kadi_session");
             window.location.reload();
           }
           break;
       }
     },
-    [setIdentity, setGameState, showToast]
+    [setIdentity, setGameState, showToast, setIsRefreshing, setIsReconnecting]
   );
 
-  const { send, isConnected, connect, disconnect } = useWebSocket({
+  const { send, isConnected, connect, disconnect, reconnect } = useWebSocket({
     onMessage,
     onConnect: () => {
       setConnected(true);
@@ -166,6 +176,73 @@ function App() {
       // No saved session
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleRefresh = useCallback(() => {
+    if (isRefreshing || isReconnecting) return;
+    if (!isConnected) {
+      showToast("Cannot refresh: connection is offline.");
+      return;
+    }
+    setIsRefreshing(true);
+    const sent = send({ type: "fetch_state" });
+    if (!sent) {
+      setIsRefreshing(false);
+      showToast("Failed to send refresh request.");
+      return;
+    }
+    setTimeout(() => {
+      if (useGameStore.getState().isRefreshing) {
+        setIsRefreshing(false);
+        showToast("Refresh request timed out.");
+      }
+    }, 4000);
+  }, [isRefreshing, isReconnecting, isConnected, send, setIsRefreshing, showToast]);
+
+  const handleReconnect = useCallback(() => {
+    if (isRefreshing || isReconnecting) return;
+    setIsReconnecting(true);
+
+    const savedStr = localStorage.getItem("kadi_session");
+    let session = null;
+    try {
+      if (savedStr) session = JSON.parse(savedStr);
+    } catch {
+      // ignore
+    }
+    const currentStore = useGameStore.getState();
+    const activeRoomId = currentStore.roomId || session?.roomId;
+    const activePlayerId = currentStore.playerId || session?.playerId;
+
+    if (!activeRoomId || !activePlayerId) {
+      setIsReconnecting(false);
+      showToast("No saved session found.");
+      return;
+    }
+
+    if (isConnected) {
+      const sent = send({ type: "fetch_state" });
+      if (!sent) {
+        const wsUrl = `${WS_BASE}/ws/${activeRoomId}`;
+        reconnect(wsUrl);
+      }
+      setTimeout(() => {
+        if (useGameStore.getState().isReconnecting) {
+          setIsReconnecting(false);
+        }
+      }, 3000);
+      return;
+    }
+
+    const wsUrl = `${WS_BASE}/ws/${activeRoomId}`;
+    reconnect(wsUrl);
+
+    setTimeout(() => {
+      if (useGameStore.getState().isReconnecting) {
+        setIsReconnecting(false);
+        showToast("Reconnect request timed out.");
+      }
+    }, 5000);
+  }, [isRefreshing, isReconnecting, isConnected, send, reconnect, setIsReconnecting, showToast]);
 
   const handleLeave = () => {
     send({ type: "leave" }, true);
@@ -265,6 +342,22 @@ function App() {
           <span className="spacer" />
           <button
             className="btn btn-ghost btn-sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing || isReconnecting}
+            title="Re-fetch latest room state & re-render UI"
+          >
+            {isRefreshing ? "Refreshing…" : "Refresh"}
+          </button>
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={handleReconnect}
+            disabled={isRefreshing || isReconnecting}
+            title="Re-establish network connection & session"
+          >
+            {isReconnecting ? "Reconnecting…" : "Reconnect"}
+          </button>
+          <button
+            className="btn btn-ghost btn-sm"
             onClick={() => setIs3DView(!is3DView)}
             title="Toggle 3D View"
           >
@@ -293,6 +386,27 @@ function App() {
       {toast && (
         <div className="toast" onClick={clearToast}>
           {toast}
+        </div>
+      )}
+
+      {/* Nudge Toast */}
+      {nudgeToast && (
+        <div
+          className="toast nudge-toast"
+          onClick={clearNudgeToast}
+          style={{
+            borderColor: "rgba(234, 179, 8, 0.6)",
+            background: "rgba(20, 20, 30, 0.95)",
+            boxShadow: "0 0 20px rgba(234, 179, 8, 0.4)",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <span style={{ fontSize: "18px" }}>🔔</span>
+          <span>
+            <strong>{nudgeToast.senderName}</strong> is waiting for you!
+          </span>
         </div>
       )}
     </div>

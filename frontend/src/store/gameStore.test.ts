@@ -25,4 +25,61 @@ describe('gameStore', () => {
     expect(state.seat).toBe(0);
     expect(state.isHost).toBe(true);
   });
+
+  it('should update state and recalculate seat without mutating player identity on refresh', () => {
+    useGameStore.getState().setIdentity({
+      playerId: "p1",
+      roomId: "r1",
+      seat: 0,
+      isHost: false
+    });
+    useGameStore.getState().setIsRefreshing(true);
+    expect(useGameStore.getState().isRefreshing).toBe(true);
+
+    const mockGame: any = {
+      status: "playing",
+      players: [
+        { id: "p1", name: "Player 1", seat: 2, is_host: true },
+        { id: "p2", name: "Player 2", seat: 0, is_host: false }
+      ]
+    };
+    const mockHand: any[] = [{ rank: "A", suit: "S", deck_index: 0 }];
+
+    useGameStore.getState().setGameState(mockGame, mockHand);
+
+    const updated = useGameStore.getState();
+    expect(updated.gameState).toEqual(mockGame);
+    expect(updated.hand).toEqual(mockHand);
+    expect(updated.seat).toBe(2);
+    expect(updated.isHost).toBe(true);
+    expect(updated.playerId).toBe("p1");
+    expect(updated.roomId).toBe("r1");
+    expect(updated.isRefreshing).toBe(false);
+  });
+
+  it('should handle isReconnecting state and clear flags on state update', () => {
+    useGameStore.getState().setIsReconnecting(true);
+    expect(useGameStore.getState().isReconnecting).toBe(true);
+
+    const mockGame: any = {
+      status: "lobby",
+      players: [{ id: "p1", name: "Player 1", seat: 0, is_host: true }]
+    };
+
+    useGameStore.getState().setGameState(mockGame);
+
+    const updated = useGameStore.getState();
+    expect(updated.isReconnecting).toBe(false);
+    expect(updated.isRefreshing).toBe(false);
+  });
+
+  it('should set and clear nudgeToast correctly', () => {
+    useGameStore.getState().showNudgeToast("Alice");
+    const state = useGameStore.getState();
+    expect(state.nudgeToast).not.toBeNull();
+    expect(state.nudgeToast?.senderName).toBe("Alice");
+
+    useGameStore.getState().clearNudgeToast();
+    expect(useGameStore.getState().nudgeToast).toBeNull();
+  });
 });

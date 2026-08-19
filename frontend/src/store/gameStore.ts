@@ -71,6 +71,15 @@ interface GameStore {
   showToast: (msg: string) => void;
   clearToast: () => void;
 
+  nudgeToast: { senderName: string; timestamp: number } | null;
+  showNudgeToast: (senderName: string) => void;
+  clearNudgeToast: () => void;
+
+  isRefreshing: boolean;
+  setIsRefreshing: (v: boolean) => void;
+  isReconnecting: boolean;
+  setIsReconnecting: (v: boolean) => void;
+
   // Actions
   reset: () => void;
   leaveRoom: () => void;
@@ -130,6 +139,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       seat: me?.seat ?? state.seat,
       isHost: me?.is_host ?? state.isHost,
       trickWinner: null,
+      isRefreshing: false,
+      isReconnecting: false,
     });
   },
 
@@ -186,6 +197,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }, 3000);
   },
   clearToast: () => set({ toast: null }),
+
+  nudgeToast: null,
+  showNudgeToast: (senderName) => {
+    const entry = { senderName, timestamp: Date.now() };
+    set({ nudgeToast: entry });
+    setTimeout(() => {
+      set((s) => (s.nudgeToast?.timestamp === entry.timestamp ? { nudgeToast: null } : {}));
+    }, 4000);
+  },
+  clearNudgeToast: () => set({ nudgeToast: null }),
+
+  isRefreshing: false,
+  setIsRefreshing: (v) => set({ isRefreshing: v }),
+  isReconnecting: false,
+  setIsReconnecting: (v) => set({ isReconnecting: v }),
 
   // Actions
   reset: () => {

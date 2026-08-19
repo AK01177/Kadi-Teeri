@@ -19,7 +19,7 @@ playerJoinAudio.preload = "auto";
 gameStartAudio.preload = "auto";
 bidClickAudio.preload = "auto";
 
-const playSound = (audioNode: HTMLAudioElement) => {
+export const playSound = (audioNode: HTMLAudioElement) => {
   try {
     // Reset and replay the same instance instead of cloning (prevents DOM node leaks)
     audioNode.currentTime = 0;
@@ -32,6 +32,13 @@ const playSound = (audioNode: HTMLAudioElement) => {
     console.error("Audio error:", err);
   }
 };
+
+export function triggerNudgeAlert() {
+  playSound(yourTurnAudio);
+  if (typeof navigator !== "undefined" && navigator.vibrate) {
+    navigator.vibrate([100, 50, 100]);
+  }
+}
 
 export function useSoundEffects() {
   const { gameState, seat, trickWinner, pendingBid } = useGameStore();

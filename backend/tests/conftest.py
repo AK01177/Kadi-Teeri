@@ -1,51 +1,59 @@
 """
-Shared test fixtures for Kadi Teeri game engine tests.
+Pytest configuration and shared test fixtures for unit and integration tests.
 """
+
+from __future__ import annotations
+
 import pytest
-from models import Player, GameState, GameStatus, RoomConfig, Card
+from fastapi.testclient import TestClient
+
+from app.main import app
+from app.models.game import GameState, GameStatus, Player, RoomConfig, Card
 
 
 @pytest.fixture
-def four_player_game():
+def test_client() -> TestClient:
+    """FastAPI TestClient instance."""
+    return TestClient(app)
+
+
+@pytest.fixture
+def sample_game_state() -> GameState:
+    """Standard 4-player lobby GameState fixture."""
+    players = [Player(id=f"p{i}", name=f"Player {i}", seat=i, is_host=(i == 0)) for i in range(4)]
+    return GameState(
+        status=GameStatus.LOBBY,
+        config=RoomConfig(player_count=4, deck_count=1),
+        players=players,
+        dealer=0,
+    )
+
+@pytest.fixture
+def four_player_game() -> GameState:
     """Create a standard 4-player game state for testing."""
-    game = GameState(
-        players=[
-            Player(id=str(i), name=f"P{i+1}", seat=i)
-            for i in range(4)
-        ],
+    return GameState(
+        players=[Player(id=str(i), name=f"P{i+1}", seat=i, is_host=(i == 0)) for i in range(4)],
         config=RoomConfig(player_count=4, deck_count=1),
     )
-    return game
-
 
 @pytest.fixture
-def six_player_game():
+def six_player_game() -> GameState:
     """Create a 6-player game state for testing."""
-    game = GameState(
-        players=[
-            Player(id=str(i), name=f"P{i+1}", seat=i)
-            for i in range(6)
-        ],
+    return GameState(
+        players=[Player(id=str(i), name=f"P{i+1}", seat=i, is_host=(i == 0)) for i in range(6)],
         config=RoomConfig(player_count=6, deck_count=1),
     )
-    return game
-
 
 @pytest.fixture
-def eight_player_double_deck():
+def eight_player_double_deck() -> GameState:
     """Create an 8-player, 2-deck game state for testing."""
-    game = GameState(
-        players=[
-            Player(id=str(i), name=f"P{i+1}", seat=i)
-            for i in range(8)
-        ],
+    return GameState(
+        players=[Player(id=str(i), name=f"P{i+1}", seat=i, is_host=(i == 0)) for i in range(8)],
         config=RoomConfig(player_count=8, deck_count=2),
     )
-    return game
-
 
 @pytest.fixture
-def sample_hand():
+def sample_hand() -> list[Card]:
     """A sample hand of cards for testing."""
     return [
         Card(rank="A", suit="S", deck_index=0),

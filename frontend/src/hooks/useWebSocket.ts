@@ -12,6 +12,7 @@ interface UseWebSocketReturn {
   isConnected: boolean;
   disconnect: () => void;
   connect: (url: string) => void;
+  reconnect: (url?: string) => boolean;
 }
 
 const MAX_RECONNECT_DELAY = 3000;
@@ -193,10 +194,30 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
     };
   }, [cleanup]);
 
+  const reconnect = useCallback(
+    (targetUrl?: string) => {
+      const url = targetUrl || urlRef.current;
+      if (!url) return false;
+      cleanup();
+      if (wsRef.current) {
+        try {
+          wsRef.current.close();
+        } catch {
+          // ignore
+        }
+        wsRef.current = null;
+      }
+      doConnect(url);
+      return true;
+    },
+    [cleanup, doConnect]
+  );
+
   return {
     send,
     isConnected,
     disconnect,
     connect: doConnect,
+    reconnect,
   };
 }
