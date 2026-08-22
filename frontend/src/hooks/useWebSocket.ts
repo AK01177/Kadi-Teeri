@@ -94,19 +94,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
           try {
             const msg = JSON.parse(event.data) as ServerMessage;
             if (msg.type === "pong") {
-              const pingMs = Date.now() - lastPingSentRef.current;
               lastPongRef.current = Date.now();
-              // Only send ping update if we have a reasonable ping value
-              if (pingMs >= 0 && pingMs < 5000) {
-                 const prev = lastSentPingMsRef.current;
-                 const now = Date.now();
-                 // Throttle updates: only if it changed by >20ms or it's been 10 seconds
-                 if (Math.abs(pingMs - prev) > 20 || (now - lastSentPingTimeRef.current > 10000)) {
-                    send({ type: "update_ping", ping_ms: pingMs }, true);
-                    lastSentPingMsRef.current = pingMs;
-                    lastSentPingTimeRef.current = now;
-                 }
-              }
               return; // Handled heartbeat, don't pass to app
             }
             optionsRef.current.onMessage(msg);

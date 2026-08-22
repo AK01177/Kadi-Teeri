@@ -27,35 +27,35 @@ class ConnectionManager:
         self._rooms: dict[str, dict[str, WebSocket]] = {}
         # Reverse lookup: player_id -> room_id
         self._player_rooms: dict[str, str] = {}
-        # PubSub listener tasks: room_id -> Task
-        self._listeners: dict[str, asyncio.Task] = {}
-        # PubSub instances: room_id -> PubSub
-        self._pubsubs: dict[str, PubSub] = {}
+        
+        self._global_pubsub: PubSub | None = None
+        self._global_listener_task: asyncio.Task | None = None
+        self._listener_started = False
+
+    async def _start_global_listener(self):
+        if self._listener_started or not redis_client:
+            return
+        self._listener_started = True
+        try:
+            self._global_pubsub = redis_client.pubsub()
+            await self._global_pubsub.psubscribe("room:events:*")
+            self._global_listener_task = asyncio.create_task(self._listen_to_redis())
+            logger.info("Started global Redis PubSub listener on 'room:events:*'")
+        except Exception as e:
+            logger.warning(f"Failed to start global Redis listener: {e}. Falling back to local mode.")
+            self._listener_started = False
 
     async def add(self, room_id: str, player_id: str, ws: WebSocket) -> None:
         """Register a local WebSocket connection."""
-        is_new_room = False
+        if not self._listener_started:
+            await self._start_global_listener()
+            
         if room_id not in self._rooms:
             self._rooms[room_id] = {}
-            is_new_room = True
 
         self._rooms[room_id][player_id] = ws
         self._player_rooms[player_id] = room_id
         logger.info(f"Player {player_id} connected locally to room {room_id}")
-
-        if is_new_room and redis_client:
-            try:
-                # Subscribe to the room's Redis channel
-                pubsub = redis_client.pubsub()
-                channel_name = f"room:events:{room_id}"
-                await pubsub.subscribe(channel_name)
-                self._pubsubs[room_id] = pubsub
-
-                # Start listener task
-                task = asyncio.create_task(self._listen_to_redis(room_id, pubsub))
-                self._listeners[room_id] = task
-            except Exception as e:
-                logger.warning(f"Failed to subscribe to Redis: {e}. Falling back to local mode.")
 
     def remove(self, player_id: str) -> str | None:
         """Remove a local player's connection."""
@@ -65,26 +65,10 @@ class ConnectionManager:
             logger.info(f"Player {player_id} disconnected locally from room {room_id}")
 
             if not self._rooms[room_id]:
-                # No more local players in this room, clean up Redis subscription
+                # No more local players in this room
                 del self._rooms[room_id]
-                self._cleanup_listener(room_id)
 
         return room_id
-
-    def _cleanup_listener(self, room_id: str):
-        """Stop listening to a room's Redis channel."""
-        if room_id in self._listeners:
-            self._listeners[room_id].cancel()
-            del self._listeners[room_id]
-        if room_id in self._pubsubs:
-            pubsub = self._pubsubs.pop(room_id)
-            async def _cleanup():
-                try:
-                    await pubsub.unsubscribe()
-                    await pubsub.close()
-                except Exception as e:
-                    logger.warning(f"Error cleaning up pubsub for {room_id}: {e}")
-            asyncio.create_task(_cleanup())
 
     def get_ws(self, player_id: str) -> WebSocket | None:
         """Get local WebSocket for a player."""
@@ -97,18 +81,26 @@ class ConnectionManager:
         """Get all active WebSockets locally in a room."""
         return self._rooms.get(room_id, {})
 
-    async def _listen_to_redis(self, room_id: str, pubsub: PubSub):
+    async def _listen_to_redis(self):
         """Listen for messages from Redis and forward them to local WebSockets."""
+        if not self._global_pubsub:
+            return
+            
         try:
-            async for message in pubsub.listen():
-                if message["type"] == "message":
+            async for message in self._global_pubsub.listen():
+                if message["type"] == "pmessage":
+                    channel = message["channel"]
+                    if isinstance(channel, bytes):
+                        channel = channel.decode("utf-8")
+                        
+                    room_id = channel.split(":")[-1]
                     data = json.loads(message["data"])
                     await self._handle_redis_message(room_id, data)
         except asyncio.CancelledError:
-            logger.info(f"Stopped listening to Redis for room {room_id}")
+            logger.info("Stopped global Redis listener")
         except Exception as e:
-            logger.error(f"Redis listener error for room {room_id}: {e}")
-            self._cleanup_listener(room_id)
+            logger.error(f"Global Redis listener error: {e}")
+            self._listener_started = False
 
     async def _handle_redis_message(self, room_id: str, data: dict):
         """Process a message received from Redis Pub/Sub."""

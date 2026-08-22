@@ -28,3 +28,4 @@ backend/.env.*
 .idea/
 *.swp
 *.swo
+*.bak

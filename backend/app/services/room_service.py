@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import random
+import threading
 from typing import Any, cast
 
 from app.db import supabase
@@ -52,6 +53,14 @@ class RoomManager:
         except Exception as e:
             logger.error(f"Failed to load rooms from Supabase: {e}")
 
+    def _upsert_room_to_db(self, payload: dict[str, Any]) -> None:
+        if not supabase:
+            return
+        try:
+            supabase.table("rooms").upsert(payload).execute()
+        except Exception as e:
+            logger.error(f"Failed to save room to Supabase: {e}")
+
     def save_room(self, room_id: str) -> None:
         """Persist a room's state to Supabase."""
         if not supabase:
@@ -59,23 +68,25 @@ class RoomManager:
         game = self._rooms.get(room_id)
         if not game:
             return
-        try:
-            payload = {
-                "id": room_id,
-                "state": game.model_dump(),
-                "updated_at": "now()",
-            }
-            supabase.table("rooms").upsert(payload).execute()
-        except Exception as e:
-            logger.error(f"Failed to save room {room_id} to Supabase: {e}")
+        payload = {
+            "id": room_id,
+            "state": game.model_dump(),
+            "updated_at": "now()",
+        }
+        threading.Thread(target=self._upsert_room_to_db, args=(payload,), daemon=True).start()
 
-    def _delete_room_from_db(self, room_id: str) -> None:
+    def _do_delete_room_from_db(self, room_id: str) -> None:
         if not supabase:
             return
         try:
             supabase.table("rooms").delete().eq("id", room_id).execute()
         except Exception as e:
             logger.error(f"Failed to delete room {room_id} from Supabase: {e}")
+
+    def _delete_room_from_db(self, room_id: str) -> None:
+        if not supabase:
+            return
+        threading.Thread(target=self._do_delete_room_from_db, args=(room_id,), daemon=True).start()
 
     def _generate_code(self) -> str:
         """Generate a 6-letter room code (uppercase)."""
